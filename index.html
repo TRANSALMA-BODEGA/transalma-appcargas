@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b2d4d">
+<title>TRANSALMA | Sistema de Reportes</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="shell">
+<section id="loginView" class="card auth">
+<div class="brand"><b>TA</b><div><strong>TRANSALMA</strong><small>INTERNACIONAL, S.A.</small></div></div>
+<h2>Acceso interno</h2>
+<form id="loginForm">
+<label>Correo<input id="email" type="email" required></label>
+<label>Contraseña<input id="password" type="password" required></label>
+<button>Iniciar sesión</button>
+</form><p id="loginMessage"></p>
+</section>
+<section id="appView" hidden>
+<header><div><strong>TRANSALMA INTERNACIONAL, S.A.</strong><small id="userEmail"></small></div><button id="logout" class="secondary">Cerrar sesión</button></header>
+<section class="hero"><p>SISTEMA INTERNO</p><h1>Reportes de descarga</h1><span>Seleccione el tipo de reporte.</span></section>
+<div class="cards">
+<button class="action" data-type="mercancia">📦 <span><b>Reporte de Mercancía</b><small>Registrar una descarga.</small></span></button>
+<button class="action" data-type="excepcion">⚠️ <span><b>Reporte de Excepción</b><small>Registrar una incidencia.</small></span></button>
+<button class="action" data-type="historial">📚 <span><b>Historial</b><small>Consultar reportes.</small></span></button>
+</div>
+<section id="formPanel" class="card" hidden>
+<div class="head"><h2 id="formTitle"></h2><button id="closeForm" class="secondary">Volver</button></div>
+<form id="reportForm">
+<input type="hidden" id="reportType">
+<div class="grid">
+<label>Fecha<input id="fecha" type="date" required></label>
+<label>Contenedor<input id="contenedor"></label>
+<label>Consignatario<input id="consignatario"></label>
+<label>BIL/B.L.<input id="bl"></label>
+<label>Bultos<input id="bultos"></label>
+<label>Clase de mercancía<input id="clase"></label>
+<label class="wide">Detalle de mercancía<textarea id="detalle"></textarea></label>
+<label class="wide">Observación<textarea id="observacion"></textarea></label>
+<label>Correo del cliente<input id="clientEmail" type="email" required></label>
+<label>Transportista<input id="transportista"></label>
+<label>Bodega<input id="bodega"></label>
+</div>
+<div id="exceptionFields" class="grid" hidden>
+<label class="wide">Incidencias<textarea id="incidencias"></textarea></label>
+<label class="wide">Observación de excepción<textarea id="observacionExcepcion"></textarea></label>
+<label>¿Reclamo dentro de 24 horas?<select id="reclamo24"><option value="">Seleccionar</option><option value="true">Sí</option><option value="false">No</option></select></label>
+</div>
+<button>Guardar reporte</button><p id="formMessage"></p>
+</form>
+</section>
+<section id="historyPanel" class="card" hidden>
+<div class="head"><h2>Historial</h2><button id="closeHistory" class="secondary">Volver</button></div>
+<div id="historyContent">Cargando…</div>
+</section>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
