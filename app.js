@@ -118,7 +118,7 @@
     const {error}=await sup.storage.from("report-photos").upload(path,file,{contentType:file.type||"image/jpeg",upsert:false});
     if(error)throw error;
     const {error:dbError}=await sup.from("report_photos").insert({report_id:reportId,storage_path:path,original_name:file.name,mime_type:file.type||"image/jpeg",sort_order:index+1});
-    if(dbError)throw dbError;
+    if(dbError)throw new Error(`No se pudo guardar la fotografía en report_photos: ${dbError.message||"error RLS"}`);
   }
 
   async function uploadSignature(reportId,role,name,canvas){
@@ -129,7 +129,7 @@
     const {error}=await sup.storage.from("report-signatures").upload(path,blob,{contentType:"image/png",upsert:true});
     if(error)throw error;
     const {error:dbError}=await sup.from("report_signatures").upsert({report_id:reportId,role,storage_path:path,signer_name:name.trim()||null},{onConflict:"report_id,role"});
-    if(dbError)throw dbError;
+    if(dbError)throw new Error(`No se pudo guardar la firma en report_signatures: ${dbError.message||"error RLS"}`);
   }
 
   $("reportForm").onsubmit=async e=>{
@@ -161,13 +161,15 @@
       if(error)throw error;
       const reportId=data.id;
 
+      // La creación del reporte no debe bloquearse si falla únicamente la trazabilidad.
       const e1=await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"REPORTE_CREADO",p_message:`Reporte ${data.report_number} creado`});
-      if(e1.error)throw e1.error;
+      if(e1.error)console.warn("Reporte creado, pero no se pudo registrar REPORTE_CREADO:",e1.error);
+
       for(let i=0;i<files.length;i++)await uploadPhoto(reportId,files[i],i);
       await uploadSignature(reportId,"transportista",$("transportistaNombreFirma").value,$("sigTransportista"));
       await uploadSignature(reportId,"bodega",$("bodegaNombreFirma").value,$("sigBodega"));
       const e2=await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"SOPORTES_CARGADOS",p_message:`Fotos y firmas cargadas para ${data.report_number}`});
-      if(e2.error)throw e2.error;
+      if(e2.error)console.warn("Reporte guardado, pero no se pudo registrar SOPORTES_CARGADOS:",e2.error);
 
       lastSavedReportId=reportId;lastSavedReportNumber=data.report_number;$("pdfActions").hidden=false;
       msg("formMessage",`Reporte ${data.report_number} guardado con ${files.length} foto(s) y 2 firmas.`);
