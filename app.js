@@ -170,7 +170,8 @@
       await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"SOPORTES_CARGADOS",p_message:`Fotos y firmas cargadas para ${data.report_number}`});
       lastSavedReportId=reportId; lastSavedReportNumber=data.report_number;
       $("pdfActions").hidden=false;
-      $("pdfActions").scrollIntoView({behavior:"smooth",block:"center"});
+      $("pdfActions").style.display="block";
+      requestAnimationFrame(()=>$("pdfActions").scrollIntoView({behavior:"smooth",block:"center"}));
       msg("formMessage",`Reporte ${data.report_number} guardado con ${files.length} foto(s) y 2 firmas. Ahora puedes generar el PDF.`);
       $("reportForm").reset();
       setDate();
