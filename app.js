@@ -6,6 +6,7 @@
   const today=()=>new Date().toISOString().slice(0,10);
   let lastSavedReportId=null;
   let lastSavedReportNumber=null;
+  let lastPdfPayload=null;
 
   function setDate(){ $("fecha").value=today(); }
 
@@ -52,7 +53,7 @@
   $("closeHistory").onclick=()=>$("historyPanel").hidden=true;
 
   function resetForm(){
-    lastSavedReportId=null; lastSavedReportNumber=null;
+    lastSavedReportId=null; lastSavedReportNumber=null; lastPdfPayload=null;
     $("pdfActions").hidden=true; msg("pdfMessage","");
     $("reportForm").reset();
     setDate();
@@ -168,6 +169,13 @@
       await uploadSignature(reportId,"transportista",$("transportistaNombreFirma").value,$("sigTransportista"));
       await uploadSignature(reportId,"bodega",$("bodegaNombreFirma").value,$("sigBodega"));
       await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"SOPORTES_CARGADOS",p_message:`Fotos y firmas cargadas para ${data.report_number}`});
+      const photoData=[];
+      for(const file of files){ photoData.push({meta:{original_name:file.name},dataUrl:await blobToDataUrl(file)}); }
+      const sigData={
+        transportista:{role:"transportista",signer_name:$('transportistaNombreFirma').value.trim()||null,dataUrl:$('sigTransportista').toDataURL("image/png")},
+        bodega:{role:"bodega",signer_name:$('bodegaNombreFirma').value.trim()||null,dataUrl:$('sigBodega').toDataURL("image/png")}
+      };
+      lastPdfPayload={report:data,photoData,sigData};
       lastSavedReportId=reportId; lastSavedReportNumber=data.report_number;
       $("pdfActions").hidden=false;
       $("pdfActions").style.display="block";
@@ -215,7 +223,10 @@
 
   async function generatePdf(reportId){
     const {jsPDF}=window.jspdf;
-    const {report,photoData,sigData}=await fetchReportAssets(reportId);
+    if(!jsPDF)throw new Error("No se pudo cargar el generador de PDF. Revisa tu conexión a internet y vuelve a cargar la página.");
+    let payload=lastPdfPayload;
+    if(!payload){ payload=await fetchReportAssets(reportId); }
+    const {report,photoData,sigData}=payload;
     const doc=new jsPDF({unit:"mm",format:"a4"});
     const W=210, margin=15, content=W-margin*2;
     doc.setFillColor(11,45,77); doc.rect(0,0,W,28,"F");
@@ -259,13 +270,14 @@
       }
     }
     const pdfBlob=doc.output("blob");
+    // Descargar primero: así el usuario recibe el PDF aunque el almacenamiento tenga un problema.
+    doc.save(`${report.report_number}.pdf`);
     const path=`${reportId}/${report.report_number}.pdf`;
     const {error:upError}=await sup.storage.from("report-pdfs").upload(path,pdfBlob,{contentType:"application/pdf",upsert:true});
-    if(upError)throw upError;
+    if(upError){ console.error(upError); throw new Error(`El PDF se descargó, pero no se pudo guardar en Supabase: ${upError.message||upError}`); }
     const {error:updError}=await sup.from("reports").update({pdf_storage_path:path,status:"PDF_GENERADO"}).eq("id",reportId);
     if(updError)throw updError;
     await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"PDF_GENERADO",p_message:`PDF generado para ${report.report_number}`});
-    doc.save(`${report.report_number}.pdf`);
   }
 
   $("generatePdf").onclick=async()=>{
