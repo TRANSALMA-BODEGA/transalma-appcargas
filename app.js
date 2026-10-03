@@ -11,11 +11,12 @@
   const esc=v=>String(v??"").replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[x]));
 
   function closeAllPanels(){
-    $("formPanel").hidden=true;
-    $("historyPanel").hidden=true;
-    $("adminPanel").hidden=true;
-    $("editPanel").hidden=true;
-  }
+  $("formPanel").hidden=true;
+  $("historyPanel").hidden=true;
+  $("adminPanel").hidden=true;
+  $("editPanel").hidden=true;
+  $("usersPanel").hidden=true;
+}
 
   function setDate(){ $("fecha").value=today(); }
 
@@ -316,7 +317,106 @@
   }
 
   $("openAdminHistory").onclick=adminHistory;
+$("openAdminUsers").onclick=usersAdmin;
+$("closeUsers").onclick=()=>{$("usersPanel").hidden=true};
 
+async function usersAdmin(){
+  if(!currentIsAdmin)return;
+
+  closeAllPanels();
+  $("usersPanel").hidden=false;
+  $("usersContent").textContent="Cargando…";
+
+  const {data,error}=await sup
+    .from("profiles")
+    .select("id,email,full_name,role,active,created_at,updated_at")
+    .order("email");
+
+  if(error){
+    $("usersContent").textContent=error.message;
+    return;
+  }
+
+  if(!data.length){
+    $("usersContent").textContent="No hay usuarios registrados.";
+    return;
+  }
+
+  $("usersContent").innerHTML=
+    "<div class='table-wrap'><table>"+
+    "<tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acción</th></tr>"+
+    data.map(u=>`
+      <tr>
+        <td>
+          <input class="user-name" data-id="${esc(u.id)}" value="${esc(u.full_name||"")}">
+        </td>
+        <td>${esc(u.email||"")}</td>
+        <td>
+          <select class="user-role" data-id="${esc(u.id)}">
+            <option value="operador" ${u.role==="operador"?"selected":""}>Operador</option>
+            <option value="admin" ${u.role==="admin"?"selected":""}>Administrador</option>
+          </select>
+        </td>
+        <td>
+          <select class="user-active" data-id="${esc(u.id)}">
+            <option value="true" ${u.active?"selected":""}>Activo</option>
+            <option value="false" ${!u.active?"selected":""}>Inactivo</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" class="save-user" data-id="${esc(u.id)}">💾 Guardar</button>
+        </td>
+      </tr>
+    `).join("")+
+    "</table></div>";
+
+  document.querySelectorAll(".save-user").forEach(button=>{
+    button.onclick=()=>saveUser(button.dataset.id);
+  });
+}
+
+async function saveUser(userId){
+  if(!currentIsAdmin)return;
+
+  const nameInput=document.querySelector(`.user-name[data-id="${CSS.escape(userId)}"]`);
+  const roleInput=document.querySelector(`.user-role[data-id="${CSS.escape(userId)}"]`);
+  const activeInput=document.querySelector(`.user-active[data-id="${CSS.escape(userId)}"]`);
+
+  if(!nameInput||!roleInput||!activeInput)return;
+
+  if(userId===currentUser.id && activeInput.value==="false"){
+    alert("No puedes desactivar tu propio usuario mientras estás conectado.");
+    return;
+  }
+
+  if(userId===currentUser.id && roleInput.value!=="admin"){
+    alert("No puedes quitarte el rol de administrador mientras estás conectado.");
+    return;
+  }
+
+  const button=document.querySelector(`.save-user[data-id="${CSS.escape(userId)}"]`);
+  if(button)button.disabled=true;
+
+  const {error}=await sup
+    .from("profiles")
+    .update({
+      full_name:nameInput.value.trim()||null,
+      role:roleInput.value,
+      active:activeInput.value==="true",
+      updated_at:new Date().toISOString()
+    })
+    .eq("id",userId);
+
+  if(button)button.disabled=false;
+
+  if(error){
+    alert("No se pudo guardar el usuario: "+error.message);
+    return;
+  }
+
+  alert("Usuario actualizado correctamente.");
+  usersAdmin();
+}
   async function openEdit(reportId){
     if(!currentIsAdmin)return;
     const {data,error}=await sup.from("reports").select("*").eq("id",reportId).single();
