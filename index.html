@@ -9,108 +9,133 @@
 </head>
 <body>
 <main class="shell">
+
 <section id="loginView" class="card auth">
-<div class="brand"><b>TA</b><div><strong>TRANSALMA</strong><small>INTERNACIONAL, S.A.</small></div></div>
-<h2>Acceso interno</h2>
-<form id="loginForm">
-<label>Correo<input id="email" type="email" autocomplete="username" required></label>
-<label>Contraseña<input id="password" type="password" autocomplete="current-password" required></label>
-<button>Iniciar sesión</button>
-</form><p id="loginMessage"></p>
+  <div class="brand"><b>TA</b><div><strong>TRANSALMA</strong><small>INTERNACIONAL, S.A.</small></div></div>
+  <h2>Acceso interno</h2>
+  <form id="loginForm">
+    <label>Correo<input id="email" type="email" autocomplete="username" required></label>
+    <label>Contraseña<input id="password" type="password" autocomplete="current-password" required></label>
+    <button>Iniciar sesión</button>
+  </form>
+  <p id="loginMessage"></p>
 </section>
+
 <section id="appView" hidden>
-<header><div><strong>TRANSALMA INTERNACIONAL, S.A.</strong><small id="userEmail"></small></div><button id="logout" class="secondary">Cerrar sesión</button></header>
-<section class="hero"><p>SISTEMA INTERNO</p><h1>Reportes de descarga</h1><span>Seleccione el tipo de reporte.</span></section>
-<div class="cards">
-<button class="action" data-type="mercancia">📦 <span><b>Reporte de Mercancía</b><small>Registrar una descarga.</small></span></button>
-<button class="action" data-type="excepcion">⚠️ <span><b>Reporte de Excepción</b><small>Registrar una incidencia.</small></span></button>
-<button class="action" data-type="historial">📚 <span><b>Historial</b><small>Consultar reportes.</small></span></button>
-<button id="adminAction" class="action" data-type="administracion" hidden>⚙️ <span><b>Administración</b><small>Editar, anular y auditar.</small></span></button>
+<header>
+  <div><strong>TRANSALMA INTERNACIONAL, S.A.</strong><small id="userEmail"></small></div>
+  <button id="logout" class="secondary">Cerrar sesión</button>
+</header>
+
+<section class="hero">
+  <p>SISTEMA INTERNO</p>
+  <h1>Reportes de descarga</h1>
+  <span id="roleLabel">Seleccione el tipo de reporte.</span>
+</section>
+
+<div class="cards" id="mainActions">
+  <button class="action" data-type="mercancia">📦 <span><b>Reporte de Mercancía</b><small>Registrar una descarga.</small></span></button>
+  <button class="action" data-type="excepcion">⚠️ <span><b>Reporte de Excepción</b><small>Registrar una incidencia.</small></span></button>
+  <button class="action" data-type="historial">📚 <span><b>Historial</b><small>Consultar reportes.</small></span></button>
 </div>
+
+<section id="adminCard" class="card admin-card" hidden>
+  <div class="head">
+    <div><h2>🛠️ Administración</h2><p class="hint">Funciones exclusivas del administrador.</p></div>
+    <span class="admin-badge">ADMIN</span>
+  </div>
+  <div class="admin-actions">
+    <button id="openAdminHistory">📋 Administrar reportes</button>
+    <button id="openAdminUsers" type="button" class="secondary" disabled>👥 Usuarios <small>Próximamente</small></button>
+  </div>
+</section>
+
 <section id="formPanel" class="card" hidden>
-<div class="head"><h2 id="formTitle"></h2><button id="closeForm" type="button" class="secondary">Volver</button></div>
-<form id="reportForm">
-<input type="hidden" id="reportType">
-<div class="grid">
-<label>Fecha<input id="fecha" type="date" required></label>
-<label>Contenedor<input id="contenedor" placeholder="Ej. MSKU1234567"></label>
-<label>Consignatario<input id="consignatario" required></label>
-<label>BIL/B.L.<input id="bl"></label>
-<label>Bultos<input id="bultos" type="number" min="0" step="1"></label>
-<label>Clase de mercancía<input id="clase" placeholder="Ej. carga general"></label>
-<label class="wide">Detalle de mercancía<textarea id="detalle"></textarea></label>
-<label class="wide">Observación<textarea id="observacion"></textarea></label>
-<label>Correo del cliente<input id="clientEmail" type="email" required></label>
-<label>Transportista<input id="transportista" placeholder="Nombre completo"></label>
-<label>Bodega / Chequeador<input id="bodega" placeholder="Nombre completo"></label>
-</div>
-<div id="exceptionFields" class="grid" hidden>
-<label class="wide">Incidencias<textarea id="incidencias"></textarea></label>
-<label class="wide">Observación de excepción<textarea id="observacionExcepcion"></textarea></label>
-<label>¿Reclamo dentro de 24 horas?<select id="reclamo24"><option value="">Seleccionar</option><option value="true">Sí</option><option value="false">No</option></select></label>
-</div>
-<section class="subcard">
-<h3>Fotografías de la mercancía</h3>
-<p class="hint">En teléfono o tablet puedes usar la cámara. Puedes seleccionar varias fotos.</p>
-<input id="photos" type="file" accept="image/*" capture="environment" multiple>
-<div id="photoPreview" class="photo-preview"></div>
-</section>
-<section class="subcard signatures">
-<h3>Firmas</h3>
-<p class="hint">Dibuja con el dedo o lápiz digital. Si necesitas repetir una firma, usa “Limpiar”.</p>
-<div class="signature-grid">
-<div><label>Firma del transportista<input id="transportistaNombreFirma" placeholder="Nombre completo"></label><canvas id="sigTransportista" class="signature-pad" width="700" height="260"></canvas><button type="button" class="secondary clear-signature" data-canvas="sigTransportista">Limpiar</button></div>
-<div><label>Firma de bodega / chequeador<input id="bodegaNombreFirma" placeholder="Nombre completo"></label><canvas id="sigBodega" class="signature-pad" width="700" height="260"></canvas><button type="button" class="secondary clear-signature" data-canvas="sigBodega">Limpiar</button></div>
-</div>
-</section>
-<button id="saveReport">Guardar reporte</button><div id="pdfActions" class="pdf-actions" hidden><button id="generatePdf" type="button">Generar PDF</button><span id="pdfMessage"></span></div><p id="formMessage"></p>
-</form>
-</section>
+  <div class="head"><h2 id="formTitle"></h2><button id="closeForm" type="button" class="secondary">Volver</button></div>
+  <form id="reportForm">
+    <input type="hidden" id="reportType">
+    <div class="grid">
+      <label>Fecha<input id="fecha" type="date" required></label>
+      <label>Contenedor<input id="contenedor" placeholder="Ej. MSKU1234567"></label>
+      <label>Consignatario<input id="consignatario" required></label>
+      <label>BIL/B.L.<input id="bl"></label>
+      <label>Bultos<input id="bultos" type="number" min="0" step="1"></label>
+      <label>Clase de mercancía<input id="clase" placeholder="Ej. carga general"></label>
+      <label class="wide">Detalle de mercancía<textarea id="detalle"></textarea></label>
+      <label class="wide">Observación<textarea id="observacion"></textarea></label>
+      <label>Correo del cliente<input id="clientEmail" type="email" required></label>
+      <label>Transportista<input id="transportista" placeholder="Nombre completo"></label>
+      <label>Bodega / Chequeador<input id="bodega" placeholder="Nombre completo"></label>
+    </div>
 
-<section id="adminPanel" class="card" hidden>
-<div class="head"><h2>Administración</h2><button id="closeAdmin" type="button" class="secondary">Volver</button></div>
-<p class="hint">Funciones administrativas. Los reportes anulados permanecen en el historial.</p>
-<div class="admin-test-tools">
-  <label>ID del reporte de prueba
-    <input id="testReportId" placeholder="UUID del reporte">
-  </label>
-  <button id="markTest" type="button" class="secondary">🧪 Marcar como prueba</button>
-</div>
-<div id="adminContent">Cargando…</div>
-</section>
+    <div id="exceptionFields" class="grid" hidden>
+      <label class="wide">Incidencias<textarea id="incidencias"></textarea></label>
+      <label class="wide">Observación de excepción<textarea id="observacionExcepcion"></textarea></label>
+      <label>¿Reclamo dentro de 24 horas?
+        <select id="reclamo24"><option value="">Seleccione</option><option value="true">Sí</option><option value="false">No</option></select>
+      </label>
+    </div>
 
-<section id="editPanel" class="card" hidden>
-<div class="head"><h2>Editar reporte <span id="editReportNumber"></span></h2><button id="closeEdit" type="button" class="secondary">Volver</button></div>
-<p class="hint">La modificación queda registrada. Las fotos y firmas existentes se conservan.</p>
-<form id="editForm">
-<div class="grid">
-<label>Fecha<input id="editFecha" type="date" required></label>
-<label>Contenedor<input id="editContenedor"></label>
-<label>Consignatario<input id="editConsignatario" required></label>
-<label>BIL/B.L.<input id="editBl"></label>
-<label>Bultos<input id="editBultos" type="number" min="0" step="1"></label>
-<label>Clase de mercancía<input id="editClase"></label>
-<label class="wide">Detalle de mercancía<textarea id="editDetalle"></textarea></label>
-<label class="wide">Observación<textarea id="editObservacion"></textarea></label>
-<label>Correo del cliente<input id="editClientEmail" type="email" required></label>
-<label>Transportista<input id="editTransportista"></label>
-<label>Bodega / Chequeador<input id="editBodega"></label>
-</div>
-<div id="editExceptionFields" class="grid" hidden>
-<label class="wide">Incidencias<textarea id="editIncidencias"></textarea></label>
-<label class="wide">Observación de excepción<textarea id="editObservacionExcepcion"></textarea></label>
-<label>¿Reclamo dentro de 24 horas?<select id="editReclamo24"><option value="">Seleccionar</option><option value="true">Sí</option><option value="false">No</option></select></label>
-</div>
-<label class="wide">Motivo de la modificación<textarea id="editReason" required placeholder="Ej. Corrección del número de B/L indicado por el chequeador."></textarea></label>
-<div class="edit-actions"><button type="submit" id="saveEdit">Guardar cambios</button><button type="button" id="cancelEdit" class="secondary">Cancelar</button></div>
-<p id="editMessage"></p>
-</form>
+    <section class="subcard">
+      <h3>Fotografías de la mercancía</h3>
+      <p class="hint">En teléfono o tablet puedes usar la cámara. Puedes seleccionar varias fotos.</p>
+      <input id="photos" type="file" accept="image/*" capture="environment" multiple>
+      <div id="photoPreview" class="photo-preview"></div>
+    </section>
+
+    <section class="subcard signatures">
+      <h3>Firmas</h3>
+      <p class="hint">Dibuja con el dedo o lápiz digital. Si necesitas repetir una firma, usa “Limpiar”.</p>
+      <div class="signature-grid">
+        <div><label>Firma del transportista<input id="transportistaNombreFirma" placeholder="Nombre completo"></label><canvas id="sigTransportista" class="signature-pad" width="700" height="260"></canvas><button type="button" class="secondary clear-signature" data-canvas="sigTransportista">Limpiar</button></div>
+        <div><label>Firma de bodega / chequeador<input id="bodegaNombreFirma" placeholder="Nombre completo"></label><canvas id="sigBodega" class="signature-pad" width="700" height="260"></canvas><button type="button" class="secondary clear-signature" data-canvas="sigBodega">Limpiar</button></div>
+      </div>
+    </section>
+
+    <button id="saveReport">Guardar reporte</button>
+    <div id="pdfActions" class="pdf-actions" hidden><button id="generatePdf" type="button">Generar PDF</button><span id="pdfMessage"></span></div>
+    <p id="formMessage"></p>
+  </form>
 </section>
 
 <section id="historyPanel" class="card" hidden>
-<div class="head"><h2>Historial</h2><button id="closeHistory" type="button" class="secondary">Volver</button></div>
-<div id="historyContent">Cargando…</div>
+  <div class="head"><h2>Historial</h2><button id="closeHistory" type="button" class="secondary">Volver</button></div>
+  <div id="historyContent">Cargando…</div>
 </section>
+
+<section id="adminPanel" class="card" hidden>
+  <div class="head"><div><h2>Administración de reportes</h2><p class="hint">Edición, anulación, auditoría y eliminación controlada de pruebas.</p></div><button id="closeAdmin" type="button" class="secondary">Volver</button></div>
+  <div id="adminContent">Cargando…</div>
+</section>
+
+<section id="editPanel" class="card" hidden>
+  <div class="head"><div><h2>Editar reporte</h2><p id="editReportLabel" class="hint"></p></div><button id="closeEdit" type="button" class="secondary">Cancelar</button></div>
+  <form id="editForm">
+    <input type="hidden" id="editReportId">
+    <div class="grid">
+      <label>Fecha<input id="editFecha" type="date" required></label>
+      <label>Contenedor<input id="editContenedor"></label>
+      <label>Consignatario<input id="editConsignatario" required></label>
+      <label>BIL/B.L.<input id="editBl"></label>
+      <label>Bultos<input id="editBultos" type="number" min="0" step="1"></label>
+      <label>Clase de mercancía<input id="editClase"></label>
+      <label class="wide">Detalle de mercancía<textarea id="editDetalle"></textarea></label>
+      <label class="wide">Observación<textarea id="editObservacion"></textarea></label>
+      <label>Correo del cliente<input id="editClientEmail" type="email" required></label>
+      <label>Transportista<input id="editTransportista"></label>
+      <label>Bodega / Chequeador<input id="editBodega"></label>
+      <label class="wide">Incidencias<textarea id="editIncidencias"></textarea></label>
+      <label class="wide">Observación de excepción<textarea id="editObservacionExcepcion"></textarea></label>
+      <label>¿Reclamo dentro de 24 horas?
+        <select id="editReclamo24"><option value="">Seleccione</option><option value="true">Sí</option><option value="false">No</option></select>
+      </label>
+    </div>
+    <label>Motivo de la corrección<input id="editReason" required placeholder="Explique qué se corrigió y por qué"></label>
+    <button id="saveEdit">Guardar corrección</button>
+    <p id="editMessage"></p>
+  </form>
+</section>
+
 </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
