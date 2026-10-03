@@ -6,41 +6,20 @@
   const today=()=>new Date().toISOString().slice(0,10);
   let lastSavedReportId=null;
   let lastSavedReportNumber=null;
-  let currentUser=null;
-  let currentIsAdmin=false;
-  let editingReportId=null;
 
   function setDate(){ $("fecha").value=today(); }
 
   async function session(){
     const {data}=await sup.auth.getSession();
     if(data.session){
-      currentUser=data.session.user;
-      const {data:profile}=await sup.from("profiles").select("role,active,full_name").eq("id",currentUser.id).maybeSingle();
-      currentIsAdmin=profile?.active===true && profile?.role==="admin";
       $("loginView").hidden=true;
       $("appView").hidden=false;
-      $("userEmail").textContent=profile?.full_name ? `${profile.full_name} · ${currentUser.email||""}` : (currentUser.email||"");
-      $("adminAction").hidden=!currentIsAdmin;
+      $("userEmail").textContent=data.session.user.email||"";
       setDate();
     }else{
-      currentUser=null;
-      currentIsAdmin=false;
       $("loginView").hidden=false;
       $("appView").hidden=true;
-      $("adminAction").hidden=true;
     }
-  }
-
-  function hidePanels(){
-    $("formPanel").hidden=true;
-    $("historyPanel").hidden=true;
-    $("adminPanel").hidden=true;
-    $("editPanel").hidden=true;
-  }
-
-  function esc(v){
-    return String(v??"").replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[x]));
   }
 
   $("loginForm").onsubmit=async e=>{
@@ -56,15 +35,11 @@
 
   document.querySelectorAll(".action").forEach(b=>b.onclick=async()=>{
     const t=b.dataset.type;
-    hidePanels();
+    $("formPanel").hidden=true;
+    $("historyPanel").hidden=true;
     if(t==="historial"){
       $("historyPanel").hidden=false;
       return history();
-    }
-    if(t==="administracion"){
-      if(!currentIsAdmin)return;
-      $("adminPanel").hidden=false;
-      return adminHistory();
     }
     $("formTitle").textContent=t==="mercancia"?"Reporte de Mercancía":"Reporte de Excepción";
     $("reportType").value=t;
@@ -75,9 +50,6 @@
 
   $("closeForm").onclick=()=>$("formPanel").hidden=true;
   $("closeHistory").onclick=()=>$("historyPanel").hidden=true;
-  $("closeAdmin").onclick=()=>$("adminPanel").hidden=true;
-  $("closeEdit").onclick=()=>{editingReportId=null;$("editPanel").hidden=true;};
-  $("cancelEdit").onclick=()=>{editingReportId=null;$("editPanel").hidden=true;};
 
   function resetForm(){
     lastSavedReportId=null; lastSavedReportNumber=null;
@@ -260,6 +232,18 @@
     doc.text(String(report.report_number||""),W-margin,25,{align:"right"});
     doc.setTextColor(23,33,43); doc.setFontSize(10); doc.setFont(undefined,"normal");
     let y=43;
+
+    // Estado del reporte: un reporte ANULADO debe quedar claramente identificado.
+    if(report.status==="ANULADO"){
+      doc.setFillColor(180,30,30);
+      doc.roundedRect(margin,y-6,content,12,2,2,"F");
+      doc.setTextColor(255,255,255);
+      doc.setFontSize(14); doc.setFont(undefined,"bold");
+      doc.text("REPORTE ANULADO",W/2,y+2,{align:"center"});
+      y+=15;
+      doc.setTextColor(23,33,43);
+      doc.setFontSize(10); doc.setFont(undefined,"normal");
+    }
     const rows=[
       ["FECHA",report.fecha], ["CONTENEDOR",report.contenedor], ["CONSIGNATARIO",report.consignatario],
       ["BIL/B.L.",report.bl], ["BULTOS",report.bultos], ["CLASE DE MERCANCÍA",report.clase]
@@ -300,7 +284,9 @@
     const path=`${reportId}/${report.report_number}.pdf`;
     const {error:upError}=await sup.storage.from("report-pdfs").upload(path,pdfBlob,{contentType:"application/pdf",upsert:true});
     if(upError)throw upError;
-    const {error:updError}=await sup.from("reports").update({pdf_storage_path:path,status:"PDF_GENERADO"}).eq("id",reportId);
+    // Generar/descargar el PDF no debe quitar el estado ANULADO.
+    const nextStatus=report.status==="ANULADO"?"ANULADO":"PDF_GENERADO";
+    const {error:updError}=await sup.from("reports").update({pdf_storage_path:path,status:nextStatus}).eq("id",reportId);
     if(updError)throw updError;
     await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"PDF_GENERADO",p_message:`PDF generado para ${report.report_number}`});
   }
@@ -317,6 +303,7 @@
     const {data,error}=await sup.from("reports").select("id,report_number,fecha,report_type,contenedor,consignatario,status,resultado").order("created_at",{ascending:false}).limit(100);
     if(error)return $("historyContent").textContent=error.message;
     if(!data.length)return $("historyContent").textContent="No hay reportes registrados.";
+    const esc=v=>String(v??"").replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[x]));
     $("historyContent").innerHTML="<div class='table-wrap'><table><tr><th>Reporte</th><th>Fecha</th><th>Tipo</th><th>Contenedor</th><th>Consignatario</th><th>Resultado</th><th>Estado</th><th>PDF</th></tr>"+data.map(r=>`<tr><td>${esc(r.report_number)}</td><td>${esc(r.fecha)}</td><td>${esc(r.report_type)}</td><td>${esc(r.contenedor)}</td><td>${esc(r.consignatario)}</td><td>${esc(r.resultado)}</td><td>${esc(r.status)}</td><td><button type='button' class='history-pdf' data-report-id='${esc(r.id)}' data-report-number='${esc(r.report_number)}'>📄 PDF</button></td></tr>`).join("")+"</table></div>";
     document.querySelectorAll('.history-pdf').forEach(btn=>btn.addEventListener('click',async()=>{
       btn.disabled=true;
@@ -325,238 +312,6 @@
       catch(error){console.error(error); alert(error.message||'No se pudo generar el PDF.'); btn.textContent=old; btn.disabled=false;}
     }));
   }
-
-
-  // =========================================================
-  // ADMINISTRACIÓN
-  // =========================================================
-
-  const editableFields=[
-    ["fecha","Fecha"],
-    ["contenedor","Contenedor"],
-    ["consignatario","Consignatario"],
-    ["bl","BIL/B.L."],
-    ["bultos","Bultos"],
-    ["clase","Clase de mercancía"],
-    ["detalle","Detalle de mercancía"],
-    ["observacion","Observación"],
-    ["client_email","Correo del cliente"],
-    ["transportista_nombre","Transportista"],
-    ["bodega_nombre","Bodega / Chequeador"],
-    ["incidencias","Incidencias"],
-    ["observacion_excepcion","Observación de excepción"],
-    ["reclamo_dentro_24h","Reclamo dentro de 24 horas"]
-  ];
-
-  async function adminHistory(){
-    if(!currentIsAdmin)return;
-    $("adminContent").textContent="Cargando…";
-    const {data,error}=await sup.from("reports")
-      .select("id,report_number,fecha,report_type,contenedor,consignatario,status,resultado,is_test,updated_at")
-      .order("created_at",{ascending:false}).limit(100);
-    if(error){$("adminContent").textContent=error.message;return;}
-    if(!data.length){$("adminContent").textContent="No hay reportes registrados.";return;}
-
-    $("adminContent").innerHTML=
-      "<div class='table-wrap'><table><tr><th>Reporte</th><th>Fecha</th><th>Tipo</th><th>Consignatario</th><th>Estado</th><th>Prueba</th><th>Acciones</th></tr>"+
-      data.map(r=>{
-        const canEdit=r.status!=="ANULADO";
-        return `<tr>
-          <td>${esc(r.report_number)}</td>
-          <td>${esc(r.fecha)}</td>
-          <td>${esc(r.report_type)}</td>
-          <td>${esc(r.consignatario)}</td>
-          <td>${esc(r.status)}</td>
-          <td>${r.is_test?"SÍ":"NO"}</td>
-          <td class="admin-actions">
-            <button type="button" class="admin-pdf" data-id="${esc(r.id)}">📄 PDF</button>
-            ${canEdit?`<button type="button" class="admin-edit" data-id="${esc(r.id)}">✏️ Editar</button>`:""}
-            ${r.status!=="ANULADO"?`<button type="button" class="admin-annul" data-id="${esc(r.id)}" data-number="${esc(r.report_number)}">🚫 Anular</button>`:""}
-            <button type="button" class="admin-audit" data-id="${esc(r.id)}">📝 Cambios</button>
-            ${r.is_test?`<button type="button" class="admin-delete-test" data-id="${esc(r.id)}" data-number="${esc(r.report_number)}">🗑️ Eliminar prueba</button>`:""}
-          </td>
-        </tr>`;
-      }).join("")+"</table></div>";
-
-    document.querySelectorAll(".admin-pdf").forEach(btn=>btn.onclick=async()=>{
-      btn.disabled=true;
-      try{await generatePdf(btn.dataset.id);btn.textContent="✓ PDF";}
-      catch(e){alert(e.message||"No se pudo generar el PDF.");btn.disabled=false;}
-    });
-    document.querySelectorAll(".admin-edit").forEach(btn=>btn.onclick=()=>openEdit(btn.dataset.id));
-    document.querySelectorAll(".admin-annul").forEach(btn=>btn.onclick=()=>annulReport(btn.dataset.id,btn.dataset.number));
-    document.querySelectorAll(".admin-audit").forEach(btn=>btn.onclick=()=>showAudit(btn.dataset.id));
-    document.querySelectorAll(".admin-delete-test").forEach(btn=>btn.onclick=()=>deleteTestReport(btn.dataset.id,btn.dataset.number));
-  }
-
-  async function openEdit(reportId){
-    if(!currentIsAdmin)return;
-    const {data,error}=await sup.from("reports").select("*").eq("id",reportId).single();
-    if(error) return alert(error.message);
-    if(data.status==="ANULADO") return alert("Un reporte ANULADO no puede editarse.");
-    editingReportId=reportId;
-
-    $("editFecha").value=data.fecha||"";
-    $("editContenedor").value=data.contenedor||"";
-    $("editConsignatario").value=data.consignatario||"";
-    $("editBl").value=data.bl||data.bil_bl||"";
-    $("editBultos").value=data.bultos??"";
-    $("editClase").value=data.clase||data.clase_mercancia||"";
-    $("editDetalle").value=data.detalle||data.detalle_mercancia||"";
-    $("editObservacion").value=data.observacion||"";
-    $("editClientEmail").value=data.client_email||"";
-    $("editTransportista").value=data.transportista_nombre||"";
-    $("editBodega").value=data.bodega_nombre||"";
-    $("editIncidencias").value=data.incidencias||"";
-    $("editObservacionExcepcion").value=data.observacion_excepcion||"";
-    $("editReclamo24").value=data.reclamo_dentro_24h==null?"":String(data.reclamo_dentro_24h);
-    $("editReason").value="";
-    $("editReportNumber").textContent=data.report_number||"";
-    $("editExceptionFields").hidden=data.report_type!=="excepcion";
-
-    $("adminPanel").hidden=true;
-    $("editPanel").hidden=false;
-  }
-
-  $("editForm").onsubmit=async e=>{
-    e.preventDefault();
-    if(!currentIsAdmin||!editingReportId)return;
-    const button=$("saveEdit");
-    button.disabled=true;
-    $("editMessage").textContent="Guardando cambios…";
-    try{
-      const {data:old,error:oldError}=await sup.from("reports").select("*").eq("id",editingReportId).single();
-      if(oldError)throw oldError;
-      if(old.status==="ANULADO")throw new Error("El reporte está ANULADO y no puede editarse.");
-
-      const payload={
-        fecha:$("editFecha").value,
-        contenedor:$("editContenedor").value.trim()||null,
-        consignatario:$("editConsignatario").value.trim()||null,
-        bl:$("editBl").value.trim()||null,
-        bultos:$("editBultos").value===""?null:Number($("editBultos").value),
-        clase:$("editClase").value.trim()||null,
-        detalle:$("editDetalle").value.trim()||null,
-        observacion:$("editObservacion").value.trim()||null,
-        client_email:$("editClientEmail").value.trim()||null,
-        transportista_nombre:$("editTransportista").value.trim()||null,
-        bodega_nombre:$("editBodega").value.trim()||null,
-        incidencias:$("editIncidencias").value.trim()||null,
-        observacion_excepcion:$("editObservacionExcepcion").value.trim()||null,
-        reclamo_dentro_24h:$("editReclamo24").value===""?null:$("editReclamo24").value==="true",
-        updated_at:new Date().toISOString(),
-        status:"PENDIENTE"
-      };
-
-      if(!payload.consignatario)throw new Error("El consignatario es obligatorio.");
-      if(!payload.client_email)throw new Error("El correo del cliente es obligatorio.");
-      if(old.report_type==="excepcion"&&!payload.incidencias)throw new Error("La excepción debe conservar una incidencia.");
-      const reason=$("editReason").value.trim();
-      if(!reason)throw new Error("Indica el motivo de la modificación.");
-
-      const changes={};
-      for(const [key,label] of editableFields){
-        const before=old[key]??null;
-        const after=payload[key]??null;
-        if(String(before??"")!==String(after??"")){
-          changes[key]={campo:label,antes:before,despues:after};
-        }
-      }
-
-      if(!Object.keys(changes).length){
-        $("editMessage").textContent="No se detectaron cambios.";
-        return;
-      }
-
-      const {error:updateError}=await sup.from("reports").update(payload).eq("id",editingReportId);
-      if(updateError)throw updateError;
-
-      const {error:auditError}=await sup.rpc("log_report_change",{
-        p_report_id:editingReportId,
-        p_action:"REPORTE_EDITADO",
-        p_reason:reason,
-        p_changes:changes
-      });
-
-      if(auditError){
-        await sup.from("reports").update({
-          fecha:old.fecha,contenedor:old.contenedor,consignatario:old.consignatario,
-          bl:old.bl,bultos:old.bultos,clase:old.clase,detalle:old.detalle,
-          observacion:old.observacion,client_email:old.client_email,
-          transportista_nombre:old.transportista_nombre,bodega_nombre:old.bodega_nombre,
-          incidencias:old.incidencias,observacion_excepcion:old.observacion_excepcion,
-          reclamo_dentro_24h:old.reclamo_dentro_24h,status:old.status,updated_at:old.updated_at
-        }).eq("id",editingReportId);
-        throw auditError;
-      }
-
-      $("editMessage").textContent=`${old.report_number} actualizado. Las fotos y firmas existentes se conservaron.`;
-      setTimeout(()=>{editingReportId=null;$("editPanel").hidden=true;$("adminPanel").hidden=false;adminHistory();},700);
-    }catch(error){
-      console.error(error);
-      $("editMessage").textContent=error.message||"No se pudo guardar la modificación.";
-    }finally{button.disabled=false;}
-  };
-
-  async function annulReport(reportId,reportNumber){
-    if(!currentIsAdmin)return;
-    const reason=prompt(`Motivo de anulación para ${reportNumber}:`);
-    if(reason===null)return;
-    if(!reason.trim())return alert("Debes indicar el motivo.");
-    if(!confirm(`¿Confirmas ANULAR el reporte ${reportNumber}? El reporte permanecerá en el historial.`))return;
-    try{
-      const {error}=await sup.rpc("admin_annul_report",{p_report_id:reportId,p_reason:reason.trim()});
-      if(error)throw error;
-      alert(`${reportNumber} quedó ANULADO.`);
-      await adminHistory();
-    }catch(error){
-      console.error(error);
-      alert(error.message||"No se pudo anular el reporte.");
-    }
-  }
-
-  async function deleteTestReport(reportId,reportNumber){
-    if(!currentIsAdmin)return;
-    const reason=prompt(`Motivo para eliminar el reporte de prueba ${reportNumber}:`);
-    if(reason===null)return;
-    if(!reason.trim())return alert("Debes indicar el motivo.");
-    if(!confirm(`ATENCIÓN: ${reportNumber} está marcado como PRUEBA. ¿Eliminarlo definitivamente?`))return;
-    try{
-      const {error}=await sup.rpc("admin_delete_test_report",{p_report_id:reportId,p_reason:reason.trim()});
-      if(error)throw error;
-      alert(`${reportNumber} fue eliminado.`);
-      await adminHistory();
-    }catch(error){
-      console.error(error);
-      alert(error.message||"No se pudo eliminar el reporte de prueba.");
-    }
-  }
-
-  async function showAudit(reportId){
-    const {data,error}=await sup.from("report_audit_log")
-      .select("action,changed_at,reason,changes,changed_by")
-      .eq("report_id",reportId)
-      .order("changed_at",{ascending:false});
-    if(error)return alert(error.message);
-    if(!data.length)return alert("Este reporte todavía no tiene modificaciones registradas.");
-    const lines=data.map((x,i)=>{
-      const date=new Date(x.changed_at).toLocaleString("es-PA");
-      const changes=x.changes&&typeof x.changes==="object" ? Object.entries(x.changes).map(([k,v])=>`${v.campo||k}: "${v.antes??""}" → "${v.despues??""}"`).join("\n") : "";
-      return `${i+1}. ${x.action}\nFecha: ${date}\nMotivo: ${x.reason||"—"}\n${changes||"Sin detalle de campos."}`;
-    });
-    alert(lines.join("\n\n"));
-  }
-
-  $("markTest").onclick=async()=>{
-    if(!currentIsAdmin)return;
-    const id=$("testReportId").value.trim();
-    if(!id)return alert("Indica el ID del reporte.");
-    const {error}=await sup.from("reports").update({is_test:true,updated_at:new Date().toISOString()}).eq("id",id);
-    if(error)return alert(error.message);
-    alert("Reporte marcado como prueba. Ya puedes eliminarlo desde Administración.");
-    $("testReportId").value="";
-    await adminHistory();
-  };
 
   sup.auth.onAuthStateChange(()=>session());
   session();
