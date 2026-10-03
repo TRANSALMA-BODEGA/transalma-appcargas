@@ -214,14 +214,24 @@
   async function generatePdf(reportId){
     const {jsPDF}=window.jspdf;
     const {report,photoData,sigData}=await fetchReportAssets(reportId);
+    const logoResponse=await fetch("logo.png");
+    if(!logoResponse.ok)throw new Error("No se encontró el logo de TRANSALMA (logo.png).");
+    const logoDataUrl=await blobToDataUrl(await logoResponse.blob());
     const doc=new jsPDF({unit:"mm",format:"a4"});
     const W=210, margin=15, content=W-margin*2;
-    doc.setFillColor(11,45,77); doc.rect(0,0,W,28,"F");
-    doc.setTextColor(255,255,255); doc.setFontSize(17); doc.setFont(undefined,"bold"); doc.text("TRANSALMA INTERNACIONAL, S.A.",margin,12);
-    doc.setFontSize(9); doc.setFont(undefined,"normal"); doc.text("REPORTE DE MERCANCÍA",margin,19);
-    doc.text(String(report.report_number||""),W-margin,19,{align:"right"});
+
+    // Encabezado ejecutivo con el logo oficial.
+    doc.setFillColor(255,255,255); doc.rect(0,0,W,34,"F");
+    doc.addImage(logoDataUrl,"PNG",margin,3,68,28);
+    doc.setDrawColor(11,45,77); doc.setLineWidth(0.8); doc.line(margin,32,W-margin,32);
+    doc.setTextColor(11,45,77); doc.setFontSize(13); doc.setFont(undefined,"bold");
+    doc.text(report.report_type==="excepcion"?"REPORTE DE EXCEPCIÓN":"REPORTE DE MERCANCÍA",W-margin,12,{align:"right"});
+    doc.setFontSize(9); doc.setFont(undefined,"normal"); doc.setTextColor(90,105,118);
+    doc.text("TRANSALMA INTERNACIONAL, S.A.",W-margin,18,{align:"right"});
+    doc.setFont(undefined,"bold"); doc.setTextColor(23,33,43);
+    doc.text(String(report.report_number||""),W-margin,25,{align:"right"});
     doc.setTextColor(23,33,43); doc.setFontSize(10); doc.setFont(undefined,"normal");
-    let y=38;
+    let y=43;
     const rows=[
       ["FECHA",report.fecha], ["CONTENEDOR",report.contenedor], ["CONSIGNATARIO",report.consignatario],
       ["BIL/B.L.",report.bl], ["BULTOS",report.bultos], ["CLASE DE MERCANCÍA",report.clase]
@@ -248,7 +258,7 @@
     }
     y+=boxH+10;
     if(photoData.length){
-      doc.addPage(); y=18; doc.setFontSize(15); doc.setFont(undefined,"bold"); doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y); y+=8;
+      doc.addPage(); y=18; doc.setFontSize(15); doc.setFont(undefined,"bold"); doc.setTextColor(11,45,77); doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y); doc.setDrawColor(11,45,77); doc.setLineWidth(0.5); doc.line(margin,y+3,W-margin,y+3); y+=10; doc.setTextColor(23,33,43);
       for(const ph of photoData){
         if(y>250){doc.addPage();y=18;}
         const props=doc.getImageProperties(ph.dataUrl); const maxW=content, maxH=100; let iw=maxW, ih=iw*props.height/props.width;
