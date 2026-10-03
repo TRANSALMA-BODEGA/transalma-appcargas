@@ -272,15 +272,20 @@
     const path=`${reportId}/${report.report_number}.pdf`;
     const {error:upError}=await sup.storage.from("report-pdfs").upload(path,pdfBlob,{contentType:"application/pdf",upsert:true});
     if(upError)throw upError;
-    // Si el reporte está ANULADO, no intentamos modificar la fila de reports.
-    // La política RLS conserva el reporte anulado como histórico y bloquea su actualización.
-    if(report.status!=="ANULADO"){
-      const {error:updError}=await sup.from("reports").update({pdf_storage_path:path,status:"PDF_GENERADO"}).eq("id",reportId);
-      if(updError)throw updError;
+
+    // La generación del PDF NO debe modificar el reporte.
+    // Esto evita errores RLS, especialmente en reportes ANULADOS.
+    // El PDF queda guardado en Storage y el estado histórico se conserva.
+    try{
+      const ev=await sup.rpc("add_report_event",{
+        p_report_id:reportId,
+        p_event_type:"PDF_GENERADO",
+        p_message:`PDF generado para ${report.report_number}`
+      });
+      if(ev.error)console.warn("No se pudo registrar el evento PDF_GENERADO:",ev.error);
+    }catch(evError){
+      console.warn("Evento PDF_GENERADO omitido:",evError);
     }
-    // El PDF ya fue generado y descargado; el evento no debe impedir la descarga.
-    const ev=await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"PDF_GENERADO",p_message:`PDF generado para ${report.report_number}`});
-    if(ev.error)console.warn("No se pudo registrar el evento PDF_GENERADO:",ev.error);
   }
 
   $("generatePdf").onclick=async()=>{
