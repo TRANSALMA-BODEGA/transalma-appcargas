@@ -6,7 +6,6 @@
   const today=()=>new Date().toISOString().slice(0,10);
   let lastSavedReportId=null;
   let lastSavedReportNumber=null;
-  let lastPdfPayload=null;
 
   function setDate(){ $("fecha").value=today(); }
 
@@ -53,7 +52,7 @@
   $("closeHistory").onclick=()=>$("historyPanel").hidden=true;
 
   function resetForm(){
-    lastSavedReportId=null; lastSavedReportNumber=null; lastPdfPayload=null;
+    lastSavedReportId=null; lastSavedReportNumber=null;
     $("pdfActions").hidden=true; msg("pdfMessage","");
     $("reportForm").reset();
     setDate();
@@ -169,18 +168,9 @@
       await uploadSignature(reportId,"transportista",$("transportistaNombreFirma").value,$("sigTransportista"));
       await uploadSignature(reportId,"bodega",$("bodegaNombreFirma").value,$("sigBodega"));
       await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"SOPORTES_CARGADOS",p_message:`Fotos y firmas cargadas para ${data.report_number}`});
-      const photoData=[];
-      for(const file of files){ photoData.push({meta:{original_name:file.name},dataUrl:await blobToDataUrl(file)}); }
-      const sigData={
-        transportista:{role:"transportista",signer_name:$('transportistaNombreFirma').value.trim()||null,dataUrl:$('sigTransportista').toDataURL("image/png")},
-        bodega:{role:"bodega",signer_name:$('bodegaNombreFirma').value.trim()||null,dataUrl:$('sigBodega').toDataURL("image/png")}
-      };
-      lastPdfPayload={report:data,photoData,sigData};
       lastSavedReportId=reportId; lastSavedReportNumber=data.report_number;
       $("pdfActions").hidden=false;
-      $("pdfActions").style.display="block";
-      requestAnimationFrame(()=>$("pdfActions").scrollIntoView({behavior:"smooth",block:"center"}));
-      msg("formMessage",`Reporte ${data.report_number} guardado con ${files.length} foto(s) y 2 firmas. Ahora puedes generar el PDF.`);
+      msg("formMessage",`Reporte ${data.report_number} guardado con ${files.length} foto(s) y 2 firmas.`);
       $("reportForm").reset();
       setDate();
       clearSignature("sigTransportista");clearSignature("sigBodega");
@@ -223,10 +213,7 @@
 
   async function generatePdf(reportId){
     const {jsPDF}=window.jspdf;
-    if(!jsPDF)throw new Error("No se pudo cargar el generador de PDF. Revisa tu conexión a internet y vuelve a cargar la página.");
-    let payload=lastPdfPayload;
-    if(!payload){ payload=await fetchReportAssets(reportId); }
-    const {report,photoData,sigData}=payload;
+    const {report,photoData,sigData}=await fetchReportAssets(reportId);
     const doc=new jsPDF({unit:"mm",format:"a4"});
     const W=210, margin=15, content=W-margin*2;
     doc.setFillColor(11,45,77); doc.rect(0,0,W,28,"F");
@@ -270,11 +257,11 @@
       }
     }
     const pdfBlob=doc.output("blob");
-    // Descargar primero: así el usuario recibe el PDF aunque el almacenamiento tenga un problema.
+    // Descarga inmediata para que el usuario reciba el PDF aunque Storage tarde o falle.
     doc.save(`${report.report_number}.pdf`);
     const path=`${reportId}/${report.report_number}.pdf`;
     const {error:upError}=await sup.storage.from("report-pdfs").upload(path,pdfBlob,{contentType:"application/pdf",upsert:true});
-    if(upError){ console.error(upError); throw new Error(`El PDF se descargó, pero no se pudo guardar en Supabase: ${upError.message||upError}`); }
+    if(upError)throw upError;
     const {error:updError}=await sup.from("reports").update({pdf_storage_path:path,status:"PDF_GENERADO"}).eq("id",reportId);
     if(updError)throw updError;
     await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"PDF_GENERADO",p_message:`PDF generado para ${report.report_number}`});
@@ -289,11 +276,17 @@
   };
 
   async function history(){
-    const {data,error}=await sup.from("reports").select("report_number,fecha,report_type,contenedor,consignatario,status,resultado").order("created_at",{ascending:false}).limit(100);
+    const {data,error}=await sup.from("reports").select("id,report_number,fecha,report_type,contenedor,consignatario,status,resultado").order("created_at",{ascending:false}).limit(100);
     if(error)return $("historyContent").textContent=error.message;
     if(!data.length)return $("historyContent").textContent="No hay reportes registrados.";
     const esc=v=>String(v??"").replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[x]));
-    $("historyContent").innerHTML="<div class='table-wrap'><table><tr><th>Reporte</th><th>Fecha</th><th>Tipo</th><th>Contenedor</th><th>Consignatario</th><th>Resultado</th><th>Estado</th></tr>"+data.map(r=>`<tr><td>${esc(r.report_number)}</td><td>${esc(r.fecha)}</td><td>${esc(r.report_type)}</td><td>${esc(r.contenedor)}</td><td>${esc(r.consignatario)}</td><td>${esc(r.resultado)}</td><td>${esc(r.status)}</td></tr>`).join("")+"</table></div>";
+    $("historyContent").innerHTML="<div class='table-wrap'><table><tr><th>Reporte</th><th>Fecha</th><th>Tipo</th><th>Contenedor</th><th>Consignatario</th><th>Resultado</th><th>Estado</th><th>PDF</th></tr>"+data.map(r=>`<tr><td>${esc(r.report_number)}</td><td>${esc(r.fecha)}</td><td>${esc(r.report_type)}</td><td>${esc(r.contenedor)}</td><td>${esc(r.consignatario)}</td><td>${esc(r.resultado)}</td><td>${esc(r.status)}</td><td><button type='button' class='history-pdf' data-report-id='${esc(r.id)}' data-report-number='${esc(r.report_number)}'>📄 PDF</button></td></tr>`).join("")+"</table></div>";
+    document.querySelectorAll('.history-pdf').forEach(btn=>btn.addEventListener('click',async()=>{
+      btn.disabled=true;
+      const old=btn.textContent; btn.textContent='Generando…';
+      try{await generatePdf(btn.dataset.reportId); btn.textContent='✓ PDF';}
+      catch(error){console.error(error); alert(error.message||'No se pudo generar el PDF.'); btn.textContent=old; btn.disabled=false;}
+    }));
   }
 
   sup.auth.onAuthStateChange(()=>session());
