@@ -182,27 +182,49 @@
   };
 
   function blobToDataUrl(blob){
-    return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(blob);});
+    return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("No se pudo leer el archivo descargado."));r.readAsDataURL(blob);});
+  }
+
+  function withTimeout(promise,ms,label){
+    return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(`Tiempo de espera agotado: ${label}`)),ms))]);
+  }
+
+  async function safeStorageDownload(bucket,path,label){
+    try{
+      const result=await withTimeout(sup.storage.from(bucket).download(path),10000,label);
+      if(result.error)throw result.error;
+      return result.data;
+    }catch(error){
+      console.warn(`No se pudo descargar ${label}:`,error);
+      return null;
+    }
   }
 
   async function fetchReportAssets(reportId){
-    const {data:report,error:reportError}=await sup.from("reports").select("*").eq("id",reportId).single();
-    if(reportError)throw reportError;
-    const {data:photos,error:photosError}=await sup.from("report_photos").select("storage_path,original_name,sort_order").eq("report_id",reportId).order("sort_order");
-    if(photosError)throw photosError;
-    const {data:sigs,error:sigError}=await sup.from("report_signatures").select("role,storage_path,signer_name").eq("report_id",reportId);
-    if(sigError)throw sigError;
+    const reportResult=await withTimeout(
+      sup.from("reports").select("*").eq("id",reportId).single(),10000,"datos del reporte"
+    );
+    if(reportResult.error)throw reportResult.error;
+    const report=reportResult.data;
+
+    const photosResult=await withTimeout(
+      sup.from("report_photos").select("storage_path,original_name,sort_order,mime_type").eq("report_id",reportId).order("sort_order"),10000,"lista de fotografías"
+    );
+    const sigsResult=await withTimeout(
+      sup.from("report_signatures").select("role,storage_path,signer_name").eq("report_id",reportId),10000,"lista de firmas"
+    );
+    if(photosResult.error)throw photosResult.error;
+    if(sigsResult.error)throw sigsResult.error;
+
     const photoData=[];
-    for(const ph of photos||[]){
-      const {data,error}=await sup.storage.from("report-photos").download(ph.storage_path);
-      if(error)throw error;
-      photoData.push({meta:ph,dataUrl:await blobToDataUrl(data)});
+    for(const ph of photosResult.data||[]){
+      const blob=await safeStorageDownload("report-photos",ph.storage_path,`fotografía ${ph.original_name||ph.storage_path}`);
+      if(blob)photoData.push({meta:ph,dataUrl:await blobToDataUrl(blob)});
     }
     const sigData={};
-    for(const sg of sigs||[]){
-      const {data,error}=await sup.storage.from("report-signatures").download(sg.storage_path);
-      if(error)throw error;
-      sigData[sg.role]={...sg,dataUrl:await blobToDataUrl(data)};
+    for(const sg of sigsResult.data||[]){
+      const blob=await safeStorageDownload("report-signatures",sg.storage_path,`firma ${sg.role}`);
+      if(blob)sigData[sg.role]={...sg,dataUrl:await blobToDataUrl(blob)};
     }
     return {report,photoData,sigData};
   }
@@ -214,85 +236,82 @@
   async function generatePdf(reportId){
     const {jsPDF}=window.jspdf;
     const {report,photoData,sigData}=await fetchReportAssets(reportId);
-    const logoResponse=await fetch("logo.png");
-    if(!logoResponse.ok)throw new Error("No se encontró el logo de TRANSALMA (logo.png).");
-    const logoDataUrl=await blobToDataUrl(await logoResponse.blob());
     const doc=new jsPDF({unit:"mm",format:"a4"});
     const W=210, margin=15, content=W-margin*2;
 
-    // Encabezado ejecutivo con el logo oficial.
+    // Encabezado: el PDF se genera aunque el logo no esté disponible.
+    try{
+      const logoResponse=await withTimeout(fetch("logo.png"),8000,"logo.png");
+      if(logoResponse.ok){
+        const logoDataUrl=await blobToDataUrl(await logoResponse.blob());
+        doc.addImage(logoDataUrl,"PNG",margin,3,68,28);
+      }
+    }catch(error){ console.warn("Logo no disponible:",error); }
+
     doc.setFillColor(255,255,255); doc.rect(0,0,W,34,"F");
-    doc.addImage(logoDataUrl,"PNG",margin,3,68,28);
     doc.setDrawColor(11,45,77); doc.setLineWidth(0.8); doc.line(margin,32,W-margin,32);
     doc.setTextColor(11,45,77); doc.setFontSize(13); doc.setFont(undefined,"bold");
     doc.text(report.report_type==="excepcion"?"REPORTE DE EXCEPCIÓN":"REPORTE DE MERCANCÍA",W-margin,12,{align:"right"});
     doc.setFontSize(9); doc.setFont(undefined,"normal"); doc.setTextColor(90,105,118);
     doc.text("TRANSALMA INTERNACIONAL, S.A.",W-margin,18,{align:"right"});
-    doc.setFont(undefined,"bold"); doc.setTextColor(23,33,43);
-    doc.text(String(report.report_number||""),W-margin,25,{align:"right"});
+    doc.setFont(undefined,"bold"); doc.setTextColor(23,33,43); doc.text(String(report.report_number||""),W-margin,25,{align:"right"});
+    if(report.status==="ANULADO"){
+      doc.setTextColor(190,0,0); doc.setFontSize(14); doc.setFont(undefined,"bold"); doc.text("REPORTE ANULADO",W/2,39,{align:"center"});
+    }
     doc.setTextColor(23,33,43); doc.setFontSize(10); doc.setFont(undefined,"normal");
-    let y=43;
-    const rows=[
-      ["FECHA",report.fecha], ["CONTENEDOR",report.contenedor], ["CONSIGNATARIO",report.consignatario],
-      ["BIL/B.L.",report.bl], ["BULTOS",report.bultos], ["CLASE DE MERCANCÍA",report.clase]
-    ];
-    for(const [label,value] of rows){
-      doc.setFont(undefined,"bold"); doc.text(label,margin,y); doc.setFont(undefined,"normal");
-      doc.line(margin+43,y+1,W-margin,y+1); doc.text(String(value??""),margin+46,y); y+=9;
-    }
-    doc.setFont(undefined,"bold"); doc.text("DETALLE DE MERCANCÍA",margin,y); y+=6; doc.setFont(undefined,"normal"); y=addWrapped(doc,report.detalle||"",margin,y,content,5); y+=5;
-    doc.setFont(undefined,"bold"); doc.text("OBSERVACIÓN",margin,y); y+=6; doc.setFont(undefined,"normal"); y=addWrapped(doc,report.observacion||"",margin,y,content,5); y+=8;
-    doc.setFont(undefined,"bold"); doc.text("RESULTADO",margin,y); doc.setFont(undefined,"normal");
-    doc.text(String(report.resultado||""),margin+35,y); y+=10;
+    let y=report.status==="ANULADO"?50:43;
+    const rows=[["FECHA",report.fecha],["CONTENEDOR",report.contenedor],["CONSIGNATARIO",report.consignatario],["BIL/B.L.",report.bl],["BULTOS",report.bultos],["CLASE DE MERCANCÍA",report.clase]];
+    for(const [label,value] of rows){doc.setFont(undefined,"bold");doc.text(label,margin,y);doc.setFont(undefined,"normal");doc.line(margin+43,y+1,W-margin,y+1);doc.text(String(value??""),margin+46,y);y+=9;}
+    doc.setFont(undefined,"bold");doc.text("DETALLE DE MERCANCÍA",margin,y);y+=6;doc.setFont(undefined,"normal");y=addWrapped(doc,report.detalle||"",margin,y,content,5);y+=5;
+    doc.setFont(undefined,"bold");doc.text("OBSERVACIÓN",margin,y);y+=6;doc.setFont(undefined,"normal");y=addWrapped(doc,report.observacion||"",margin,y,content,5);y+=8;
+    doc.setFont(undefined,"bold");doc.text("RESULTADO",margin,y);doc.setFont(undefined,"normal");doc.text(String(report.resultado||""),margin+35,y);y+=10;
     if(report.report_type==="excepcion"){
-      doc.setFont(undefined,"bold"); doc.text("INCIDENCIA",margin,y); y+=6; doc.setFont(undefined,"normal"); y=addWrapped(doc,report.incidencias||"",margin,y,content,5); y+=5;
-      doc.setFont(undefined,"bold"); doc.text("RECLAMO DENTRO DE 24 HORAS",margin,y); doc.setFont(undefined,"normal"); doc.text(report.reclamo_dentro_24h==null?"":(report.reclamo_dentro_24h?"SÍ":"NO"),margin+60,y); y+=9;
+      doc.setFont(undefined,"bold");doc.text("INCIDENCIA",margin,y);y+=6;doc.setFont(undefined,"normal");y=addWrapped(doc,report.incidencias||"",margin,y,content,5);y+=5;
+      doc.setFont(undefined,"bold");doc.text("RECLAMO DENTRO DE 24 HORAS",margin,y);doc.setFont(undefined,"normal");doc.text(report.reclamo_dentro_24h==null?"":(report.reclamo_dentro_24h?"SÍ":"NO"),margin+60,y);y+=9;
     }
-    doc.setFont(undefined,"bold"); doc.text("FIRMAS",margin,y); y+=5;
-    const boxW=(content-8)/2, boxH=35;
+    doc.setFont(undefined,"bold");doc.text("FIRMAS",margin,y);y+=5;
+    const boxW=(content-8)/2,boxH=35;
     for(const [idx,role] of [[0,"transportista"],[1,"bodega"]]){
-      const x=margin+idx*(boxW+8); doc.setDrawColor(170,180,190); doc.rect(x,y,boxW,boxH);
-      const sg=sigData[role]; if(sg?.dataUrl) doc.addImage(sg.dataUrl,"PNG",x+4,y+3,boxW-8,20);
-      doc.setFont(undefined,"normal"); doc.setFontSize(8); doc.text(role==="transportista"?"TRANSPORTISTA":"BODEGA / CHEQUEADOR",x+4,y+27);
-      doc.text(String(sg?.signer_name||""),x+4,y+32); doc.setFontSize(10);
+      const x=margin+idx*(boxW+8);doc.setDrawColor(170,180,190);doc.rect(x,y,boxW,boxH);const sg=sigData[role];
+      if(sg?.dataUrl){try{doc.addImage(sg.dataUrl,"PNG",x+4,y+3,boxW-8,20);}catch(e){console.warn("Firma no insertada",e);}}
+      doc.setFont(undefined,"normal");doc.setFontSize(8);doc.text(role==="transportista"?"TRANSPORTISTA":"BODEGA / CHEQUEADOR",x+4,y+27);doc.text(String(sg?.signer_name||""),x+4,y+32);doc.setFontSize(10);
     }
     y+=boxH+10;
     if(photoData.length){
-      doc.addPage(); y=18; doc.setFontSize(15); doc.setFont(undefined,"bold"); doc.setTextColor(11,45,77); doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y); doc.setDrawColor(11,45,77); doc.setLineWidth(0.5); doc.line(margin,y+3,W-margin,y+3); y+=10; doc.setTextColor(23,33,43);
+      doc.addPage();y=18;doc.setFontSize(15);doc.setFont(undefined,"bold");doc.setTextColor(11,45,77);doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y);doc.setDrawColor(11,45,77);doc.setLineWidth(0.5);doc.line(margin,y+3,W-margin,y+3);y+=10;doc.setTextColor(23,33,43);
       for(const ph of photoData){
         if(y>250){doc.addPage();y=18;}
-        const props=doc.getImageProperties(ph.dataUrl); const maxW=content, maxH=100; let iw=maxW, ih=iw*props.height/props.width;
-        if(ih>maxH){ih=maxH;iw=ih*props.width/props.height;}
-        doc.addImage(ph.dataUrl,"JPEG",margin,y,iw,ih); y+=ih+8;
+        try{
+          const props=doc.getImageProperties(ph.dataUrl);const maxW=content,maxH=100;let iw=maxW,ih=iw*props.height/props.width;if(ih>maxH){ih=maxH;iw=ih*props.width/props.height;}
+          const fmt=(ph.meta.mime_type||"").toLowerCase().includes("png")?"PNG":"JPEG";
+          doc.addImage(ph.dataUrl,fmt,margin,y,iw,ih);y+=ih+8;
+        }catch(e){
+          console.warn("Fotografía no insertada",ph.meta?.original_name,e);
+          doc.setFontSize(8);doc.setTextColor(120,120,120);doc.text(`Fotografía no disponible: ${ph.meta?.original_name||"archivo"}`,margin,y);y+=10;doc.setTextColor(23,33,43);doc.setFontSize(10);
+        }
       }
     }
-    const pdfBlob=doc.output("blob");
-    // Descarga inmediata para que el usuario reciba el PDF aunque Storage tarde o falle.
-    doc.save(`${report.report_number}.pdf`);
-    const path=`${reportId}/${report.report_number}.pdf`;
-    const {error:upError}=await sup.storage.from("report-pdfs").upload(path,pdfBlob,{contentType:"application/pdf",upsert:true});
-    if(upError)throw upError;
 
-    // La generación del PDF NO debe modificar el reporte.
-    // Esto evita errores RLS, especialmente en reportes ANULADOS.
-    // El PDF queda guardado en Storage y el estado histórico se conserva.
+    // Descargar SIEMPRE el PDF antes de cualquier operación opcional de Supabase.
+    const pdfBlob=doc.output("blob");
+    doc.save(`${report.report_number}.pdf`);
+
+    // Guardado en Storage es opcional y nunca debe bloquear la descarga.
     try{
-      const ev=await sup.rpc("add_report_event",{
-        p_report_id:reportId,
-        p_event_type:"PDF_GENERADO",
-        p_message:`PDF generado para ${report.report_number}`
-      });
-      if(ev.error)console.warn("No se pudo registrar el evento PDF_GENERADO:",ev.error);
-    }catch(evError){
-      console.warn("Evento PDF_GENERADO omitido:",evError);
-    }
+      const path=`${reportId}/${report.report_number}.pdf`;
+      const uploadResult=await withTimeout(sup.storage.from("report-pdfs").upload(path,pdfBlob,{contentType:"application/pdf",upsert:true}),12000,"guardar PDF en Storage");
+      if(uploadResult.error)console.warn("PDF descargado, pero no se pudo guardar en Storage:",uploadResult.error);
+    }catch(error){console.warn("PDF descargado; Storage no respondió:",error);}
+
+    // No hacemos UPDATE de reports ni RPC obligatorio aquí.
+    return true;
   }
 
   $("generatePdf").onclick=async()=>{
     if(!lastSavedReportId)return;
     const b=$("generatePdf"); b.disabled=true; msg("pdfMessage","Generando PDF…");
     try{await generatePdf(lastSavedReportId); msg("pdfMessage",`PDF ${lastSavedReportNumber} generado correctamente.`);}
-    catch(error){console.error(error);msg("pdfMessage",error.message||"No se pudo generar el PDF.");}
+    catch(error){console.error(error);msg("pdfMessage",`Error al generar PDF: ${error.message||error}`);}
     finally{b.disabled=false;}
   };
 
