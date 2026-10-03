@@ -13,8 +13,8 @@
 <div class="brand"><b>TA</b><div><strong>TRANSALMA</strong><small>INTERNACIONAL, S.A.</small></div></div>
 <h2>Acceso interno</h2>
 <form id="loginForm">
-<label>Correo<input id="email" type="email" required></label>
-<label>Contraseña<input id="password" type="password" required></label>
+<label>Correo<input id="email" type="email" autocomplete="username" required></label>
+<label>Contraseña<input id="password" type="password" autocomplete="current-password" required></label>
 <button>Iniciar sesión</button>
 </form><p id="loginMessage"></p>
 </section>
@@ -27,32 +27,46 @@
 <button class="action" data-type="historial">📚 <span><b>Historial</b><small>Consultar reportes.</small></span></button>
 </div>
 <section id="formPanel" class="card" hidden>
-<div class="head"><h2 id="formTitle"></h2><button id="closeForm" class="secondary">Volver</button></div>
+<div class="head"><h2 id="formTitle"></h2><button id="closeForm" type="button" class="secondary">Volver</button></div>
 <form id="reportForm">
 <input type="hidden" id="reportType">
 <div class="grid">
 <label>Fecha<input id="fecha" type="date" required></label>
-<label>Contenedor<input id="contenedor"></label>
-<label>Consignatario<input id="consignatario"></label>
+<label>Contenedor<input id="contenedor" placeholder="Ej. MSKU1234567"></label>
+<label>Consignatario<input id="consignatario" required></label>
 <label>BIL/B.L.<input id="bl"></label>
-<label>Bultos<input id="bultos"></label>
-<label>Clase de mercancía<input id="clase"></label>
+<label>Bultos<input id="bultos" type="number" min="0" step="1"></label>
+<label>Clase de mercancía<input id="clase" placeholder="Ej. carga general"></label>
 <label class="wide">Detalle de mercancía<textarea id="detalle"></textarea></label>
 <label class="wide">Observación<textarea id="observacion"></textarea></label>
 <label>Correo del cliente<input id="clientEmail" type="email" required></label>
-<label>Transportista<input id="transportista"></label>
-<label>Bodega<input id="bodega"></label>
+<label>Transportista<input id="transportista" placeholder="Nombre completo"></label>
+<label>Bodega / Chequeador<input id="bodega" placeholder="Nombre completo"></label>
 </div>
 <div id="exceptionFields" class="grid" hidden>
 <label class="wide">Incidencias<textarea id="incidencias"></textarea></label>
 <label class="wide">Observación de excepción<textarea id="observacionExcepcion"></textarea></label>
 <label>¿Reclamo dentro de 24 horas?<select id="reclamo24"><option value="">Seleccionar</option><option value="true">Sí</option><option value="false">No</option></select></label>
 </div>
-<button>Guardar reporte</button><p id="formMessage"></p>
+<section class="subcard">
+<h3>Fotografías de la mercancía</h3>
+<p class="hint">En teléfono o tablet puedes usar la cámara. Puedes seleccionar varias fotos.</p>
+<input id="photos" type="file" accept="image/*" capture="environment" multiple>
+<div id="photoPreview" class="photo-preview"></div>
+</section>
+<section class="subcard signatures">
+<h3>Firmas</h3>
+<p class="hint">Dibuja con el dedo o lápiz digital. Si necesitas repetir una firma, usa “Limpiar”.</p>
+<div class="signature-grid">
+<div><label>Firma del transportista<input id="transportistaNombreFirma" placeholder="Nombre completo"></label><canvas id="sigTransportista" class="signature-pad" width="700" height="260"></canvas><button type="button" class="secondary clear-signature" data-canvas="sigTransportista">Limpiar</button></div>
+<div><label>Firma de bodega / chequeador<input id="bodegaNombreFirma" placeholder="Nombre completo"></label><canvas id="sigBodega" class="signature-pad" width="700" height="260"></canvas><button type="button" class="secondary clear-signature" data-canvas="sigBodega">Limpiar</button></div>
+</div>
+</section>
+<button id="saveReport">Guardar reporte</button><p id="formMessage"></p>
 </form>
 </section>
 <section id="historyPanel" class="card" hidden>
-<div class="head"><h2>Historial</h2><button id="closeHistory" class="secondary">Volver</button></div>
+<div class="head"><h2>Historial</h2><button id="closeHistory" type="button" class="secondary">Volver</button></div>
 <div id="historyContent">Cargando…</div>
 </section>
 </section>
