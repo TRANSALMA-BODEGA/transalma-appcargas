@@ -239,19 +239,40 @@
       doc.addPage();y=18;doc.setFontSize(15);doc.setFont(undefined,"bold");doc.setTextColor(11,45,77);doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y);doc.setDrawColor(11,45,77);doc.setLineWidth(.5);doc.line(margin,y+3,W-margin,y+3);y+=10;doc.setTextColor(23,33,43);
       for(const ph of photoData){if(y>250){doc.addPage();y=18}const props=doc.getImageProperties(ph.dataUrl);const maxW=content,maxH=100;let iw=maxW,ih=iw*props.height/props.width;if(ih>maxH){ih=maxH;iw=ih*props.width/props.height}doc.addImage(ph.dataUrl,"JPEG",margin,y,iw,ih);y+=ih+8}
     }
-    const pdfBlob=doc.output("blob");doc.save(`${report.report_number}.pdf`);
-    const path=`${reportId}/${report.report_number}.pdf`;
-    const {error:upError}=await sup.storage.from("report-pdfs").upload(path,pdfBlob,{contentType:"application/pdf",upsert:true});if(upError)throw upError;
+    const pdfBlob=doc.output("blob");
+    const fileName=`${report.report_number}.pdf`;
+    const path=`${reportId}/${fileName}`;
+
+    // Guardar primero el PDF en Storage.
+    const {error:upError}=await sup.storage
+      .from("report-pdfs")
+      .upload(path,pdfBlob,{contentType:"application/pdf",upsert:true});
+    if(upError)throw upError;
+
+    // Un reporte anulado debe conservar su estado ANULADO.
     const nextStatus=report.status==="ANULADO"?"ANULADO":"PDF_GENERADO";
-    const {error:updError}=await sup.from("reports").update({pdf_storage_path:path,status:nextStatus}).eq("id",reportId);if(updError)throw updError;
-    const ev=await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"PDF_GENERADO",p_message:`PDF generado para ${report.report_number}`});
-    if(ev.error)throw ev.error;
+    const {error:updError}=await sup
+      .from("reports")
+      .update({pdf_storage_path:path,status:nextStatus})
+      .eq("id",reportId);
+    if(updError)throw updError;
+
+    // La trazabilidad no debe impedir la descarga del PDF.
+    const ev=await sup.rpc("add_report_event",{
+      p_report_id:reportId,
+      p_event_type:"PDF_GENERADO",
+      p_message:`PDF generado para ${report.report_number}`
+    });
+    if(ev.error)console.warn("PDF generado, pero no se pudo registrar el evento:",ev.error);
+
+    // Descargar después de guardar y actualizar todo.
+    doc.save(fileName);
   }
 
   $("generatePdf").onclick=async()=>{
     if(!lastSavedReportId)return;
     const b=$("generatePdf");b.disabled=true;msg("pdfMessage","Generando PDF…");
-    try{await generatePdf(lastSavedReportId);msg("pdfMessage",`PDF ${lastSavedReportNumber} generado correctamente.`)}
+    try{await generatePdf(lastSavedReportId);msg("pdfMessage",`PDF ${lastSavedReportNumber} generado y descargado correctamente.`)}
     catch(error){console.error(error);msg("pdfMessage",error.message||"No se pudo generar el PDF.")}
     finally{b.disabled=false}
   };
