@@ -239,33 +239,35 @@
       doc.addPage();y=18;doc.setFontSize(15);doc.setFont(undefined,"bold");doc.setTextColor(11,45,77);doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y);doc.setDrawColor(11,45,77);doc.setLineWidth(.5);doc.line(margin,y+3,W-margin,y+3);y+=10;doc.setTextColor(23,33,43);
       for(const ph of photoData){if(y>250){doc.addPage();y=18}const props=doc.getImageProperties(ph.dataUrl);const maxW=content,maxH=100;let iw=maxW,ih=iw*props.height/props.width;if(ih>maxH){ih=maxH;iw=ih*props.width/props.height}doc.addImage(ph.dataUrl,"JPEG",margin,y,iw,ih);y+=ih+8}
     }
-    // Generar y descargar primero. La descarga NO depende de Storage, RLS ni auditoría.
     const pdfBlob=doc.output("blob");
     const fileName=`${report.report_number}.pdf`;
+    const path=`${reportId}/${fileName}`;
+
+    // Guardar primero el PDF en Storage.
+    const {error:upError}=await sup.storage
+      .from("report-pdfs")
+      .upload(path,pdfBlob,{contentType:"application/pdf",upsert:true});
+    if(upError)throw upError;
+
+    // Un reporte anulado debe conservar su estado ANULADO.
+    const nextStatus=report.status==="ANULADO"?"ANULADO":"PDF_GENERADO";
+    const {error:updError}=await sup
+      .from("reports")
+      .update({pdf_storage_path:path,status:nextStatus})
+      .eq("id",reportId);
+    if(updError)throw updError;
+
+    // La trazabilidad no debe impedir la descarga del PDF.
+    const ev=await sup.rpc("add_report_event",{
+      p_report_id:reportId,
+      p_event_type:"PDF_GENERADO",
+      p_message:`PDF generado para ${report.report_number}`
+    });
+    if(ev.error)console.warn("PDF generado, pero no se pudo registrar el evento:",ev.error);
+
+    // Descargar después de guardar y actualizar todo.
     doc.save(fileName);
-
-    // Intentar guardar una copia en Storage sin bloquear la descarga.
-    try{
-      const path=`${reportId}/${fileName}`;
-      const {error:upError}=await sup.storage
-        .from("report-pdfs")
-        .upload(path,pdfBlob,{contentType:"application/pdf",upsert:true});
-      if(upError)console.warn("PDF descargado, pero no se pudo guardar en Storage:",upError);
-    }catch(storageError){
-      console.warn("PDF descargado; Storage no disponible:",storageError);
-    }
-
-    // Registrar el evento sin permitir que un RLS bloquee el PDF.
-    try{
-      const ev=await sup.rpc("add_report_event",{
-        p_report_id:reportId,
-        p_event_type:"PDF_GENERADO",
-        p_message:`PDF generado para ${report.report_number}`
-      });
-      if(ev.error)console.warn("PDF descargado, pero no se pudo registrar el evento:",ev.error);
-    }catch(eventError){
-      console.warn("PDF descargado; evento no registrado:",eventError);
-    }
+  }
 
   $("generatePdf").onclick=async()=>{
     if(!lastSavedReportId)return;
