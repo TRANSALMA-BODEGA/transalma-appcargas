@@ -73,20 +73,52 @@
 
   function setupSignature(id){
     const canvas=$(id),ctx=canvas.getContext("2d");
+    canvas.style.touchAction="none";
+    canvas.style.userSelect="none";
+    canvas.style.webkitUserSelect="none";
     ctx.fillStyle="#fff";ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.lineWidth=3;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#111";
-    let drawing=false,dirty=false;
+    ctx.lineWidth=4;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#111";
+    let drawing=false;
+
     const point=e=>{
       const r=canvas.getBoundingClientRect();
-      const source=e.touches?e.touches[0]:e;
-      return {x:(source.clientX-r.left)*canvas.width/r.width,y:(source.clientY-r.top)*canvas.height/r.height};
+      return {
+        x:(e.clientX-r.left)*canvas.width/r.width,
+        y:(e.clientY-r.top)*canvas.height/r.height
+      };
     };
-    const start=e=>{e.preventDefault();drawing=true;dirty=true;const p=point(e);ctx.beginPath();ctx.moveTo(p.x,p.y);};
-    const move=e=>{if(!drawing)return;e.preventDefault();const p=point(e);ctx.lineTo(p.x,p.y);ctx.stroke();};
-    const end=e=>{if(!drawing)return;e.preventDefault();drawing=false;};
-    canvas.addEventListener("pointerdown",start);canvas.addEventListener("pointermove",move);canvas.addEventListener("pointerup",end);canvas.addEventListener("pointerleave",end);
-    canvas.dataset.dirty="false";
-    canvas.addEventListener("pointerdown",()=>canvas.dataset.dirty="true");
+
+    const start=e=>{
+      e.preventDefault();
+      drawing=true;
+      canvas.dataset.dirty="true";
+      try{canvas.setPointerCapture(e.pointerId);}catch(_){}
+      const p=point(e);
+      ctx.beginPath();
+      ctx.moveTo(p.x,p.y);
+    };
+
+    const move=e=>{
+      if(!drawing)return;
+      e.preventDefault();
+      const p=point(e);
+      ctx.lineTo(p.x,p.y);
+      ctx.stroke();
+    };
+
+    const end=e=>{
+      if(!drawing)return;
+      e.preventDefault();
+      drawing=false;
+      try{canvas.releasePointerCapture(e.pointerId);}catch(_){}
+    };
+
+    canvas.addEventListener("pointerdown",start,{passive:false});
+    canvas.addEventListener("pointermove",move,{passive:false});
+    canvas.addEventListener("pointerup",end,{passive:false});
+    canvas.addEventListener("pointercancel",end,{passive:false});
+    canvas.addEventListener("lostpointercapture",()=>{drawing=false;});
+    canvas.addEventListener("contextmenu",e=>e.preventDefault());
   }
 
   function clearSignature(id){
