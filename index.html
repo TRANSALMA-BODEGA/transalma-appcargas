@@ -62,7 +62,7 @@
 <div><label>Firma de bodega / chequeador<input id="bodegaNombreFirma" placeholder="Nombre completo"></label><canvas id="sigBodega" class="signature-pad" width="700" height="260"></canvas><button type="button" class="secondary clear-signature" data-canvas="sigBodega">Limpiar</button></div>
 </div>
 </section>
-<button id="saveReport">Guardar reporte</button><p id="formMessage"></p>
+<button id="saveReport">Guardar reporte</button><div id="pdfActions" class="pdf-actions" hidden><button id="generatePdf" type="button">Generar PDF</button><span id="pdfMessage"></span></div><p id="formMessage"></p>
 </form>
 </section>
 <section id="historyPanel" class="card" hidden>
@@ -72,6 +72,7 @@
 </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 </body>
