@@ -25,6 +25,7 @@
 <button class="action" data-type="mercancia">📦 <span><b>Reporte de Mercancía</b><small>Registrar una descarga.</small></span></button>
 <button class="action" data-type="excepcion">⚠️ <span><b>Reporte de Excepción</b><small>Registrar una incidencia.</small></span></button>
 <button class="action" data-type="historial">📚 <span><b>Historial</b><small>Consultar reportes.</small></span></button>
+<button id="adminAction" class="action" data-type="administracion" hidden>⚙️ <span><b>Administración</b><small>Editar, anular y auditar.</small></span></button>
 </div>
 <section id="formPanel" class="card" hidden>
 <div class="head"><h2 id="formTitle"></h2><button id="closeForm" type="button" class="secondary">Volver</button></div>
@@ -65,6 +66,47 @@
 <button id="saveReport">Guardar reporte</button><div id="pdfActions" class="pdf-actions" hidden><button id="generatePdf" type="button">Generar PDF</button><span id="pdfMessage"></span></div><p id="formMessage"></p>
 </form>
 </section>
+
+<section id="adminPanel" class="card" hidden>
+<div class="head"><h2>Administración</h2><button id="closeAdmin" type="button" class="secondary">Volver</button></div>
+<p class="hint">Funciones administrativas. Los reportes anulados permanecen en el historial.</p>
+<div class="admin-test-tools">
+  <label>ID del reporte de prueba
+    <input id="testReportId" placeholder="UUID del reporte">
+  </label>
+  <button id="markTest" type="button" class="secondary">🧪 Marcar como prueba</button>
+</div>
+<div id="adminContent">Cargando…</div>
+</section>
+
+<section id="editPanel" class="card" hidden>
+<div class="head"><h2>Editar reporte <span id="editReportNumber"></span></h2><button id="closeEdit" type="button" class="secondary">Volver</button></div>
+<p class="hint">La modificación queda registrada. Las fotos y firmas existentes se conservan.</p>
+<form id="editForm">
+<div class="grid">
+<label>Fecha<input id="editFecha" type="date" required></label>
+<label>Contenedor<input id="editContenedor"></label>
+<label>Consignatario<input id="editConsignatario" required></label>
+<label>BIL/B.L.<input id="editBl"></label>
+<label>Bultos<input id="editBultos" type="number" min="0" step="1"></label>
+<label>Clase de mercancía<input id="editClase"></label>
+<label class="wide">Detalle de mercancía<textarea id="editDetalle"></textarea></label>
+<label class="wide">Observación<textarea id="editObservacion"></textarea></label>
+<label>Correo del cliente<input id="editClientEmail" type="email" required></label>
+<label>Transportista<input id="editTransportista"></label>
+<label>Bodega / Chequeador<input id="editBodega"></label>
+</div>
+<div id="editExceptionFields" class="grid" hidden>
+<label class="wide">Incidencias<textarea id="editIncidencias"></textarea></label>
+<label class="wide">Observación de excepción<textarea id="editObservacionExcepcion"></textarea></label>
+<label>¿Reclamo dentro de 24 horas?<select id="editReclamo24"><option value="">Seleccionar</option><option value="true">Sí</option><option value="false">No</option></select></label>
+</div>
+<label class="wide">Motivo de la modificación<textarea id="editReason" required placeholder="Ej. Corrección del número de B/L indicado por el chequeador."></textarea></label>
+<div class="edit-actions"><button type="submit" id="saveEdit">Guardar cambios</button><button type="button" id="cancelEdit" class="secondary">Cancelar</button></div>
+<p id="editMessage"></p>
+</form>
+</section>
+
 <section id="historyPanel" class="card" hidden>
 <div class="head"><h2>Historial</h2><button id="closeHistory" type="button" class="secondary">Volver</button></div>
 <div id="historyContent">Cargando…</div>
