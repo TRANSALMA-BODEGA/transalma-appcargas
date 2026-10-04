@@ -310,6 +310,47 @@
 
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+  $("sendReportEmail").onclick=async()=>{
+  if(!lastSavedReportId)return;
+
+  const b=$("sendReportEmail");
+  b.disabled=true;
+  const old=b.textContent;
+  b.textContent="Enviando…";
+  msg("pdfMessage","Enviando reporte al cliente…");
+
+  try{
+    const {data,error}=await sup.functions.invoke("send-report-email",{
+      body:{
+        report_id:lastSavedReportId
+      }
+    });
+
+    if(error)throw error;
+
+    if(data?.error){
+      throw new Error(data.error);
+    }
+
+    msg(
+      "pdfMessage",
+      data?.message||"Correo enviado correctamente al cliente."
+    );
+
+    b.textContent="✓ Enviado";
+  }
+  catch(error){
+    console.error("SEND_REPORT_EMAIL:",error);
+    msg(
+      "pdfMessage",
+      error.message||"No se pudo enviar el correo."
+    );
+    b.textContent=old;
+  }
+  finally{
+    b.disabled=false;
+  }
+};
   async function history(){
     const {data,error}=await sup.from("reports").select("id,report_number,fecha,report_type,contenedor,consignatario,status,resultado").order("created_at",{ascending:false}).limit(100);
     if(error)return $("historyContent").textContent=error.message;
