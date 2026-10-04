@@ -16,6 +16,7 @@
   $("adminPanel").hidden=true;
   $("editPanel").hidden=true;
   $("usersPanel").hidden=true;
+  $("createUserPanel").hidden=true;  
 }
 
   function setDate(){ $("fecha").value=today(); }
@@ -374,7 +375,86 @@ async function usersAdmin(){
     button.onclick=()=>saveUser(button.dataset.id);
   });
 }
+$("openCreateUser").onclick=()=>{
+  $("createUserPanel").hidden=false;
+  $("createUserMsg").textContent="";
+  $("newUserName").value="";
+  $("newUserEmail").value="";
+  $("newUserPassword").value="";
+  $("newUserRole").value="operador";
+  $("newUserActive").value="true";
+};
 
+$("cancelCreateUser").onclick=()=>{
+  $("createUserPanel").hidden=true;
+  $("createUserMsg").textContent="";
+};
+
+$("createUserForm").onsubmit=async event=>{
+  event.preventDefault();
+
+  if(!currentIsAdmin)return;
+
+  const button=$("createUserButton");
+  const msgEl=$("createUserMsg");
+
+  const full_name=$("newUserName").value.trim();
+  const email=$("newUserEmail").value.trim().toLowerCase();
+  const password=$("newUserPassword").value;
+  const role=$("newUserRole").value;
+  const active=$("newUserActive").value==="true";
+
+  if(!full_name){
+    msgEl.textContent="El nombre es obligatorio.";
+    return;
+  }
+
+  if(!email){
+    msgEl.textContent="El correo es obligatorio.";
+    return;
+  }
+
+  if(password.length<8){
+    msgEl.textContent="La contraseña debe tener al menos 8 caracteres.";
+    return;
+  }
+
+  button.disabled=true;
+  msgEl.textContent="Creando usuario…";
+
+  const {data,error}=await sup.functions.invoke("create-user",{
+    body:{
+      full_name,
+      email,
+      password,
+      role,
+      active
+    }
+  });
+
+  button.disabled=false;
+
+  if(error){
+    console.error(error);
+    msgEl.textContent="No se pudo crear el usuario.";
+    return;
+  }
+
+  if(!data||!data.ok){
+    msgEl.textContent=data?.error||"No se pudo crear el usuario.";
+    return;
+  }
+
+  msgEl.textContent="Usuario creado correctamente.";
+  $("createUserForm").reset();
+  $("newUserRole").value="operador";
+  $("newUserActive").value="true";
+
+  setTimeout(()=>{
+    $("createUserPanel").hidden=true;
+    usersAdmin();
+  },800);
+};
 async function saveUser(userId){
   if(!currentIsAdmin)return;
 
