@@ -432,8 +432,8 @@ $("sendReportEmail").onclick=async()=>{
           <button type="button" class="admin-edit" data-id="${esc(r.id)}" ${r.status==="ANULADO"?"disabled":""}>✏️ Editar</button>
           <button type="button" class="admin-audit" data-id="${esc(r.id)}">🕘 Cambios</button>
           <button type="button" class="admin-annul" data-id="${esc(r.id)}" ${r.status==="ANULADO"?"disabled":""}>🚫 Anular</button>
-          ${r.status==="EMAIL_ENVIADO"
-  ? `<button type="button" class="admin-resend" data-id="${esc(r.id)}">📧 Reenviar</button>`
+          ${r.status==="EMAIL_ENVIADO" || r.status==="PDF_GENERADO"
+  ? `<button type="button" class="admin-resend" data-id="${esc(r.id)}">${r.status==="EMAIL_ENVIADO" ? "📧 Reenviar" : "📧 Enviar"}</button>`
   : ""}
           ${r.is_test?`<button type="button" class="admin-delete-test danger" data-id="${esc(r.id)}">🗑️ Eliminar prueba</button>`:""}
         </td>
