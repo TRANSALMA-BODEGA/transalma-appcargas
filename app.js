@@ -280,7 +280,51 @@
     catch(error){console.error(error);msg("pdfMessage",error.message||"No se pudo generar el PDF.")}
     finally{b.disabled=false}
   };
+$("sendReportEmail").onclick=async()=>{
+  if(!lastSavedReportId){
+    msg("pdfMessage","Primero debes guardar el reporte.");
+    return;
+  }
 
+  const b=$("sendReportEmail");
+  const old=b.textContent;
+
+  b.disabled=true;
+  b.textContent="Enviando...";
+  msg("pdfMessage","Enviando reporte al cliente...");
+
+  try{
+    const {data,error}=await sup.functions.invoke("send-report-email",{
+      body:{
+        report_id:lastSavedReportId
+      }
+    });
+
+    if(error)throw error;
+
+    if(!data?.success){
+      throw new Error(data?.error || "No se pudo enviar el correo.");
+    }
+
+    msg(
+      "pdfMessage",
+      data.message || `Reporte ${lastSavedReportNumber} enviado correctamente al cliente.`
+    );
+
+    b.textContent="✓ Enviado";
+  }catch(error){
+    console.error("ERROR ENVÍO CORREO:",error);
+
+    msg(
+      "pdfMessage",
+      error.message || "No se pudo enviar el correo."
+    );
+
+    b.textContent=old;
+  }finally{
+    b.disabled=false;
+  }
+};
   async function downloadStoredPdf(reportId){
   const {data:report,error:reportError}=await sup
     .from("reports")
