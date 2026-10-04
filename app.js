@@ -6,7 +6,9 @@
   const today=()=>new Date().toISOString().slice(0,10);
 
   let currentUser=null,currentIsAdmin=false;
-  let lastSavedReportId=null,lastSavedReportNumber=null;
+
+let lastSavedReportId=sessionStorage.getItem("lastSavedReportId");
+let lastSavedReportNumber=sessionStorage.getItem("lastSavedReportNumber");
 
   const esc=v=>String(v??"").replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[x]));
 
@@ -75,7 +77,11 @@
   $("closeEdit").onclick=()=>{$("editPanel").hidden=true};
 
   function resetForm(type){
-    lastSavedReportId=null;lastSavedReportNumber=null;
+  lastSavedReportId=null;
+  lastSavedReportNumber=null;
+
+  sessionStorage.removeItem("lastSavedReportId");
+  sessionStorage.removeItem("lastSavedReportNumber");
     $("pdfActions").hidden=true;msg("pdfMessage","");
     $("reportForm").reset();setDate();
     $("reportType").value=type;
@@ -173,7 +179,13 @@
       const e2=await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"SOPORTES_CARGADOS",p_message:`Fotos y firmas cargadas para ${data.report_number}`});
       if(e2.error)console.warn("Reporte guardado, pero no se pudo registrar SOPORTES_CARGADOS:",e2.error);
 
-      lastSavedReportId=reportId;lastSavedReportNumber=data.report_number;$("pdfActions").hidden=false;
+      lastSavedReportId=reportId;
+lastSavedReportNumber=data.report_number;
+
+sessionStorage.setItem("lastSavedReportId",reportId);
+sessionStorage.setItem("lastSavedReportNumber",data.report_number);
+
+$("pdfActions").hidden=false;
       msg("formMessage",`Reporte ${data.report_number} guardado con ${files.length} foto(s) y 2 firmas.`);
       $("reportForm").reset();setDate();clearSignature("sigTransportista");clearSignature("sigBodega");$("photoPreview").innerHTML="";
     }catch(error){console.error(error);msg("formMessage",error.message||"No se pudo guardar el reporte.")}
