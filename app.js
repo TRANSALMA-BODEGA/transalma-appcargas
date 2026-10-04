@@ -281,13 +281,42 @@
     finally{b.disabled=false}
   };
 
+  async function downloadStoredPdf(reportId){
+  const {data:report,error:reportError}=await sup
+    .from("reports")
+    .select("report_number,pdf_storage_path")
+    .eq("id",reportId)
+    .single();
+
+  if(reportError)throw reportError;
+
+  if(!report?.pdf_storage_path){
+    throw new Error("Este reporte todavía no tiene un PDF almacenado.");
+  }
+
+  const {data:file,error}=await sup.storage
+    .from("report-pdfs")
+    .download(report.pdf_storage_path);
+
+  if(error)throw error;
+
+  const url=URL.createObjectURL(file);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=`${report.report_number}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
   async function history(){
     const {data,error}=await sup.from("reports").select("id,report_number,fecha,report_type,contenedor,consignatario,status,resultado").order("created_at",{ascending:false}).limit(100);
     if(error)return $("historyContent").textContent=error.message;
     if(!data.length)return $("historyContent").textContent="No hay reportes registrados.";
     $("historyContent").innerHTML="<div class='table-wrap'><table><tr><th>Reporte</th><th>Fecha</th><th>Tipo</th><th>Contenedor</th><th>Consignatario</th><th>Resultado</th><th>Estado</th><th>PDF</th></tr>"+
       data.map(r=>`<tr><td>${esc(r.report_number)}</td><td>${esc(r.fecha)}</td><td>${esc(r.report_type)}</td><td>${esc(r.contenedor)}</td><td>${esc(r.consignatario)}</td><td>${esc(r.resultado)}</td><td><span class="status ${r.status==="ANULADO"?"status-danger":""}">${esc(r.status)}</span></td><td><button type="button" class="history-pdf" data-report-id="${esc(r.id)}">📄 PDF</button></td></tr>`).join("")+"</table></div>";
-    document.querySelectorAll(".history-pdf").forEach(btn=>btn.onclick=async()=>{btn.disabled=true;const old=btn.textContent;btn.textContent="Generando…";try{await generatePdf(btn.dataset.reportId);btn.textContent="✓ PDF"}catch(e){alert(e.message||"No se pudo generar el PDF.");btn.textContent=old;btn.disabled=false}});
+    document.querySelectorAll(".history-pdf").forEach(btn=>btn.onclick=async()=>{btn.disabled=true;const old=btn.textContent;btn.textContent="Descargando...";try{await downloadStoredPdf(btn.dataset.id)}catch(e){alert(e.message)}finally{btn.disabled=false;btn.textContent=old}})
   }
 
   async function adminHistory(){
