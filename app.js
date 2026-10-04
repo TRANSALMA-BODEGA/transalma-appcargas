@@ -432,6 +432,9 @@ $("sendReportEmail").onclick=async()=>{
           <button type="button" class="admin-edit" data-id="${esc(r.id)}" ${r.status==="ANULADO"?"disabled":""}>✏️ Editar</button>
           <button type="button" class="admin-audit" data-id="${esc(r.id)}">🕘 Cambios</button>
           <button type="button" class="admin-annul" data-id="${esc(r.id)}" ${r.status==="ANULADO"?"disabled":""}>🚫 Anular</button>
+          ${r.status==="EMAIL_ENVIADO"
+  ? `<button type="button" class="admin-resend" data-id="${esc(r.id)}">📧 Reenviar</button>`
+  : ""}
           ${r.is_test?`<button type="button" class="admin-delete-test danger" data-id="${esc(r.id)}">🗑️ Eliminar prueba</button>`:""}
         </td>
       </tr>`).join("")+"</table></div>";
@@ -440,6 +443,9 @@ $("sendReportEmail").onclick=async()=>{
     document.querySelectorAll(".admin-edit").forEach(b=>b.onclick=()=>openEdit(b.dataset.id));
     document.querySelectorAll(".admin-audit").forEach(b=>b.onclick=()=>showAudit(b.dataset.id));
     document.querySelectorAll(".admin-annul").forEach(b=>b.onclick=()=>annulReport(b.dataset.id));
+    document.querySelectorAll(".admin-resend").forEach(b=>{
+  b.onclick=()=>resendReport(b.dataset.id);
+});
     document.querySelectorAll(".admin-delete-test").forEach(b=>b.onclick=()=>deleteTestReport(b.dataset.id));
   }
 
@@ -676,6 +682,71 @@ async function saveUser(userId){
     setTimeout(adminHistory,700);
   };
 
+  async function resendReport(reportId){
+  if(!currentIsAdmin)return;
+
+  if(!confirm("¿Desea reenviar este reporte al correo registrado del cliente?")){
+    return;
+  }
+
+  const button=document.querySelector(
+    `.admin-resend[data-id="${reportId}"]`
+  );
+
+  if(button){
+    button.disabled=true;
+    button.textContent="Enviando…";
+  }
+
+  try{
+    const {data,error}=await sup.functions.invoke("send-report-email",{
+      body:{
+        report_id:reportId
+      }
+    });
+
+    if(error)throw error;
+
+    if(!data?.success){
+      throw new Error(
+        data?.error || "No se pudo reenviar el correo."
+      );
+    }
+
+    const {error:eventError}=await sup.rpc("add_report_event",{
+      p_report_id:reportId,
+      p_event_type:"EMAIL_REENVIADO",
+      p_message:"Reporte reenviado al cliente"
+    });
+
+    if(eventError){
+      console.warn(
+        "Correo reenviado, pero no se pudo registrar el evento:",
+        eventError
+      );
+    }
+
+    alert(
+      data.message ||
+      "Reporte reenviado correctamente al cliente."
+    );
+
+    adminHistory();
+
+  }catch(error){
+    console.error("ERROR REENVÍO:",error);
+
+    alert(
+      error.message ||
+      "No se pudo reenviar el correo."
+    );
+
+    if(button){
+      button.disabled=false;
+      button.textContent="📧 Reenviar";
+    }
+  }
+}
   async function annulReport(reportId){
     if(!currentIsAdmin)return;
     const reason=prompt("Motivo de la anulación del reporte:");
