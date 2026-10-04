@@ -117,6 +117,56 @@
   <button id="closeUsers" type="button" class="secondary">Volver</button>
 </div>
   <div id="usersContent">Cargando…</div>
+      <div id="createUserPanel" class="card" hidden>
+  <div class="head">
+    <div>
+      <h3>➕ Nuevo usuario</h3>
+      <p class="hint">Crear un usuario interno del sistema.</p>
+    </div>
+  </div>
+
+  <form id="createUserForm">
+    <div class="grid">
+      <label>
+        Nombre completo
+        <input id="newUserName" type="text" required placeholder="Ej. Juan Pérez">
+      </label>
+
+      <label>
+        Correo electrónico
+        <input id="newUserEmail" type="email" required placeholder="usuario@transalmaint.com">
+      </label>
+
+      <label>
+        Contraseña
+        <input id="newUserPassword" type="password" required minlength="8" placeholder="Mínimo 8 caracteres">
+      </label>
+
+      <label>
+        Rol
+        <select id="newUserRole">
+          <option value="operador">Operador</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </label>
+
+      <label>
+        Estado
+        <select id="newUserActive">
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button id="createUserButton" type="submit">💾 Crear usuario</button>
+      <button id="cancelCreateUser" type="button" class="secondary">Cancelar</button>
+    </div>
+
+    <p id="createUserMsg" class="hint"></p>
+  </form>
+</div>
 </section>
 <section id="editPanel" class="card" hidden>
   <div class="head"><div><h2>Editar reporte</h2><p id="editReportLabel" class="hint"></p></div><button id="closeEdit" type="button" class="secondary">Cancelar</button></div>
