@@ -91,15 +91,45 @@ let lastSavedReportNumber=sessionStorage.getItem("lastSavedReportNumber");
     msg("formMessage","");
   }
 
-  $("photos").addEventListener("change",()=>{
-    const files=[...$("photos").files];
-    $("photoPreview").innerHTML="";
-    files.forEach(file=>{
-      const img=document.createElement("img");
-      img.alt=file.name;img.src=URL.createObjectURL(file);
-      $("photoPreview").appendChild(img);
-    });
+  let selectedPhotos = [];
+
+$("photos").addEventListener("change", () => {
+  const newFiles = [...$("photos").files];
+
+  selectedPhotos = [...selectedPhotos, ...newFiles];
+
+  renderPhotoPreview();
+
+  $("photos").value = "";
+});
+
+function renderPhotoPreview() {
+  const preview = $("photoPreview");
+  preview.innerHTML = "";
+
+  selectedPhotos.forEach((file, index) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "photo-item";
+
+    const img = document.createElement("img");
+    img.alt = file.name;
+    img.src = URL.createObjectURL(file);
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "remove-photo";
+    removeButton.textContent = "✕ Eliminar";
+
+    removeButton.onclick = () => {
+      selectedPhotos.splice(index, 1);
+      renderPhotoPreview();
+    };
+
+    wrapper.appendChild(img);
+    wrapper.appendChild(removeButton);
+    preview.appendChild(wrapper);
   });
+}
 
   function setupSignature(id){
     const canvas=$(id),ctx=canvas.getContext("2d");
@@ -162,7 +192,7 @@ let lastSavedReportNumber=sessionStorage.getItem("lastSavedReportNumber");
       if(!p.consignatario)throw new Error("El consignatario es obligatorio.");
       if(!p.client_email)throw new Error("El correo del cliente es obligatorio.");
       if(t==="excepcion"&&!p.incidencias)throw new Error("Para una excepción debes indicar la incidencia.");
-      const files=[...$("photos").files];
+      const files=[...selectedPhotos];
       if(!files.length)throw new Error("Agrega al menos una fotografía de la mercancía.");
 
       const {data,error}=await sup.from("reports").insert(p).select().single();
@@ -187,7 +217,7 @@ sessionStorage.setItem("lastSavedReportNumber",data.report_number);
 
 $("pdfActions").hidden=false;
       msg("formMessage",`Reporte ${data.report_number} guardado con ${files.length} foto(s) y 2 firmas.`);
-      $("reportForm").reset();setDate();clearSignature("sigTransportista");clearSignature("sigBodega");$("photoPreview").innerHTML="";
+      $("reportForm").reset();setDate();clearSignature("sigTransportista");clearSignature("sigBodega");selectedPhotos=[];$("photoPreview").innerHTML="";
     }catch(error){console.error(error);msg("formMessage",error.message||"No se pudo guardar el reporte.")}
     finally{saveButton.disabled=false}
   };
