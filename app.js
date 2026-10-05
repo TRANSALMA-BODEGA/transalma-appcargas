@@ -93,14 +93,29 @@ let lastSavedReportNumber=sessionStorage.getItem("lastSavedReportNumber");
 
   let selectedPhotos = [];
 
-$("photos").addEventListener("change", () => {
-  const newFiles = [...$("photos").files];
-
-  selectedPhotos = [...selectedPhotos, ...newFiles];
-
+function addSelectedPhotos(files) {
+  selectedPhotos = [...selectedPhotos, ...files];
   renderPhotoPreview();
+}
 
+$("galleryPhotoBtn").addEventListener("click", () => {
+  $("photos").click();
+});
+
+$("takePhotoBtn").addEventListener("click", () => {
+  $("cameraInput").click();
+});
+
+$("photos").addEventListener("change", () => {
+  const files = [...$("photos").files];
+  addSelectedPhotos(files);
   $("photos").value = "";
+});
+
+$("cameraInput").addEventListener("change", () => {
+  const files = [...$("cameraInput").files];
+  addSelectedPhotos(files);
+  $("cameraInput").value = "";
 });
 
 function renderPhotoPreview() {
