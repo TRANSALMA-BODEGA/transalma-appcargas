@@ -93,8 +93,8 @@ legacyIds.forEach(id=>{
   const label=element.closest("label");
 
   if(label){
-    label.hidden=type==="mercancia";
-  }
+  label.style.display=type==="mercancia"?"none":"";
+}
 });
   lastSavedReportId=null;
   lastSavedReportNumber=null;
