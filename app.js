@@ -82,15 +82,72 @@ let lastSavedReportNumber=sessionStorage.getItem("lastSavedReportNumber");
 
   sessionStorage.removeItem("lastSavedReportId");
   sessionStorage.removeItem("lastSavedReportNumber");
-    $("pdfActions").hidden=true;msg("pdfMessage","");
-    $("reportForm").reset();setDate();
-    $("reportType").value=type;
-    $("exceptionFields").hidden=type!=="excepcion";
-    selectedPhotos=[];
-    $("photoPreview").innerHTML="";
-    clearSignature("sigTransportista");clearSignature("sigBodega");
-    msg("formMessage","");
+
+  $("pdfActions").hidden=true;
+  msg("pdfMessage","");
+
+  $("reportForm").reset();
+  setDate();
+
+  $("reportType").value=type;
+  $("exceptionFields").hidden=type!=="excepcion";
+
+  const merchandiseDetails=$("merchandiseDetails");
+
+  if(merchandiseDetails){
+    merchandiseDetails.hidden=type!=="mercancia";
   }
+
+  const merchandiseList=$("merchandiseDetailsList");
+
+  if(merchandiseList){
+    merchandiseList.innerHTML=`
+      <div class="merchandise-detail" data-index="0">
+
+        <div class="head">
+          <h3>Consignatario 1</h3>
+        </div>
+
+        <div class="grid">
+
+          <label>Consignatario
+            <input type="text" class="detail-consignatario">
+          </label>
+
+          <label>BIL/B.L.
+            <input type="text" class="detail-bl">
+          </label>
+
+          <label>Bultos
+            <input type="number" min="0" step="1" class="detail-bultos">
+          </label>
+
+          <label>Clase de mercancía
+            <input type="text" class="detail-clase" placeholder="Ej. carga general">
+          </label>
+
+          <label class="wide">Detalle de mercancía
+            <textarea class="detail-detalle"></textarea>
+          </label>
+
+          <label class="wide">Observación
+            <textarea class="detail-observacion"></textarea>
+          </label>
+
+        </div>
+
+      </div>
+    `;
+  }
+
+  selectedPhotos=[];
+  $("photoPreview").innerHTML="";
+
+  clearSignature("sigTransportista");
+  clearSignature("sigBodega");
+
+  msg("formMessage","");
+}
 
   let selectedPhotos = [];
 
