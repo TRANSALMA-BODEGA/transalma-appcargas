@@ -86,6 +86,7 @@ let lastSavedReportNumber=sessionStorage.getItem("lastSavedReportNumber");
     $("reportForm").reset();setDate();
     $("reportType").value=type;
     $("exceptionFields").hidden=type!=="excepcion";
+    selectedPhotos=[];
     $("photoPreview").innerHTML="";
     clearSignature("sigTransportista");clearSignature("sigBodega");
     msg("formMessage","");
