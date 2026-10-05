@@ -57,6 +57,62 @@
     <div class="grid">
       <label>Fecha de entrada<input id="fecha" type="date" required></label>
       <label>Contenedor<input id="contenedor" placeholder="Ej. MSKU1234567"></label>
+      <section id="merchandiseDetails" class="subcard wide">
+
+  <div class="head">
+    <div>
+      <h3>📦 Detalle de mercancía</h3>
+      <p class="hint">
+        Agrega uno o varios consignatarios según corresponda.
+      </p>
+    </div>
+  </div>
+
+  <div id="merchandiseDetailsList">
+
+    <div class="merchandise-detail" data-index="0">
+
+      <div class="head">
+        <h3>Consignatario 1</h3>
+      </div>
+
+      <div class="grid">
+
+        <label>Consignatario
+          <input type="text" class="detail-consignatario">
+        </label>
+
+        <label>BIL/B.L.
+          <input type="text" class="detail-bl">
+        </label>
+
+        <label>Bultos
+          <input type="number" min="0" step="1" class="detail-bultos">
+        </label>
+
+        <label>Clase de mercancía
+          <input type="text" class="detail-clase" placeholder="Ej. carga general">
+        </label>
+
+        <label class="wide">Detalle de mercancía
+          <textarea class="detail-detalle"></textarea>
+        </label>
+
+        <label class="wide">Observación
+          <textarea class="detail-observacion"></textarea>
+        </label>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <button type="button" id="addMerchandiseDetail">
+    ➕ Agregar consignatario
+  </button>
+
+</section>
       <label>Consignatario<input id="consignatario" required></label>
       <label>BIL/B.L.<input id="bl"></label>
       <label>Bultos<input id="bultos" type="number" min="0" step="1"></label>
