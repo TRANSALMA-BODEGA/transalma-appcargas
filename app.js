@@ -279,7 +279,7 @@ $("pdfActions").hidden=false;
       doc.setTextColor(255,255,255);doc.setFontSize(11);doc.setFont(undefined,"bold");doc.text("REPORTE ANULADO",W/2,y+1,{align:"center"});
       y+=15;doc.setTextColor(23,33,43);doc.setFontSize(10);
     }else{doc.setTextColor(23,33,43);doc.setFontSize(10)}
-    const rows=[["FECHA",report.fecha],["CONTENEDOR",report.contenedor],["CONSIGNATARIO",report.consignatario],["BIL/B.L.",report.bl],["BULTOS",report.bultos],["CLASE DE MERCANCÍA",report.clase]];
+    const rows=[["FECHA DE ENTRADA",report.fecha],["CONTENEDOR",report.contenedor],["CONSIGNATARIO",report.consignatario],["BIL/B.L.",report.bl],["BULTOS",report.bultos],["CLASE DE MERCANCÍA",report.clase]];
     for(const [label,value] of rows){doc.setFont(undefined,"bold");doc.text(label,margin,y);doc.setFont(undefined,"normal");doc.line(margin+43,y+1,W-margin,y+1);doc.text(String(value??""),margin+46,y);y+=9}
     doc.setFont(undefined,"bold");doc.text("DETALLE DE MERCANCÍA",margin,y);y+=6;doc.setFont(undefined,"normal");y=addWrapped(doc,report.detalle||"",margin,y,content,5);y+=5;
     doc.setFont(undefined,"bold");doc.text("OBSERVACIÓN",margin,y);y+=6;doc.setFont(undefined,"normal");y=addWrapped(doc,report.observacion||"",margin,y,content,5);y+=8;
@@ -298,9 +298,66 @@ $("pdfActions").hidden=false;
     }
     y+=boxH+10;
     if(photoData.length){
-      doc.addPage();y=18;doc.setFontSize(15);doc.setFont(undefined,"bold");doc.setTextColor(11,45,77);doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y);doc.setDrawColor(11,45,77);doc.setLineWidth(.5);doc.line(margin,y+3,W-margin,y+3);y+=10;doc.setTextColor(23,33,43);
-      for(const ph of photoData){if(y>250){doc.addPage();y=18}const props=doc.getImageProperties(ph.dataUrl);const maxW=content,maxH=100;let iw=maxW,ih=iw*props.height/props.width;if(ih>maxH){ih=maxH;iw=ih*props.width/props.height}doc.addImage(ph.dataUrl,"JPEG",margin,y,iw,ih);y+=ih+8}
+  doc.addPage();
+  y=18;
+
+  doc.setFontSize(15);
+  doc.setFont(undefined,"bold");
+  doc.setTextColor(11,45,77);
+  doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y);
+  doc.setDrawColor(11,45,77);
+  doc.setLineWidth(.5);
+  doc.line(margin,y+3,W-margin,y+3);
+
+  y+=10;
+  doc.setTextColor(23,33,43);
+
+  const gap=8;
+  const colW=(content-gap)/2;
+  const maxH=80;
+
+  for(let i=0;i<photoData.length;i+=2){
+
+    const rowPhotos=photoData.slice(i,i+2);
+    const images=[];
+
+    for(const ph of rowPhotos){
+      const props=doc.getImageProperties(ph.dataUrl);
+
+      let iw=colW;
+      let ih=iw*props.height/props.width;
+
+      if(ih>maxH){
+        ih=maxH;
+        iw=ih*props.width/props.height;
+      }
+
+      images.push({dataUrl:ph.dataUrl,iw,ih});
     }
+
+    const rowH=Math.max(...images.map(img=>img.ih));
+
+    if(y+rowH>H-margin){
+      doc.addPage();
+      y=18;
+    }
+
+    images.forEach((img,index)=>{
+      const x=margin+index*(colW+gap);
+
+      doc.addImage(
+        img.dataUrl,
+        "JPEG",
+        x+(colW-img.iw)/2,
+        y,
+        img.iw,
+        img.ih
+      );
+    });
+
+    y+=rowH+10;
+  }
+}
     const pdfBlob=doc.output("blob");
     const fileName=`${report.report_number}.pdf`;
     const path=`${reportId}/${fileName}`;
