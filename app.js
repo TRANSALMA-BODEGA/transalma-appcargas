@@ -77,6 +77,25 @@ let lastSavedReportNumber=sessionStorage.getItem("lastSavedReportNumber");
   $("closeEdit").onclick=()=>{$("editPanel").hidden=true};
 
   function resetForm(type){
+    const legacyIds=[
+  "consignatario",
+  "bl",
+  "bultos",
+  "clase",
+  "detalle",
+  "observacion"
+];
+
+legacyIds.forEach(id=>{
+  const element=$(id);
+  if(!element)return;
+
+  const label=element.closest("label");
+
+  if(label){
+    label.hidden=type==="mercancia";
+  }
+});
   lastSavedReportId=null;
   lastSavedReportNumber=null;
 
