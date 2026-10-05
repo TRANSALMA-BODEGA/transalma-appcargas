@@ -155,7 +155,69 @@ function addSelectedPhotos(files) {
   selectedPhotos = [...selectedPhotos, ...files];
   renderPhotoPreview();
 }
+$("addMerchandiseDetail").addEventListener("click",()=>{
+  const list=$("merchandiseDetailsList");
+  if(!list)return;
 
+  const index=list.querySelectorAll(".merchandise-detail").length;
+
+  const block=document.createElement("div");
+  block.className="merchandise-detail";
+  block.dataset.index=index;
+
+  block.innerHTML=`
+    <div class="head">
+      <div>
+        <h3>Consignatario ${index+1}</h3>
+      </div>
+
+      <button type="button" class="remove-merchandise-detail">
+        ✕ Eliminar
+      </button>
+    </div>
+
+    <div class="grid">
+
+      <label>Consignatario
+        <input type="text" class="detail-consignatario">
+      </label>
+
+      <label>BIL/B.L.
+        <input type="text" class="detail-bl">
+      </label>
+
+      <label>Bultos
+        <input type="number" min="0" step="1" class="detail-bultos">
+      </label>
+
+      <label>Clase de mercancía
+        <input type="text" class="detail-clase" placeholder="Ej. carga general">
+      </label>
+
+      <label class="wide">Detalle de mercancía
+        <textarea class="detail-detalle"></textarea>
+      </label>
+
+      <label class="wide">Observación
+        <textarea class="detail-observacion"></textarea>
+      </label>
+
+    </div>
+  `;
+
+  block.querySelector(".remove-merchandise-detail").onclick=()=>{
+    block.remove();
+
+    [...list.querySelectorAll(".merchandise-detail")].forEach((item,i)=>{
+      item.dataset.index=i;
+
+      const title=item.querySelector("h3");
+      if(title)title.textContent=`Consignatario ${i+1}`;
+    });
+  };
+
+  list.appendChild(block);
+});
 $("galleryPhotoBtn").addEventListener("click", () => {
   $("photos").click();
 });
