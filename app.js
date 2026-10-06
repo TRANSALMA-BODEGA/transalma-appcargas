@@ -688,7 +688,7 @@ if(detailsError)throw detailsError;
 
     const rowH=Math.max(...images.map(img=>img.ih));
 
-    if(y+rowH>H-margin){
+    if(y+rowH>doc.internal.pageSize.getHeight()-margin){
       doc.addPage();
       y=18;
     }
