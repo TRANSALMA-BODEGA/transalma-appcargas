@@ -470,22 +470,40 @@ $("pdfActions").hidden=false;
   function blobToDataUrl(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(blob)})}
 async function blobToPngDataUrl(blob){
   const url=URL.createObjectURL(blob);
+
   try{
     const img=new Image();
     img.src=url;
+
     await new Promise((resolve,reject)=>{
       img.onload=resolve;
       img.onerror=reject;
     });
 
+    const maxWidth=1600;
+    const maxHeight=1200;
+
+    let width=img.naturalWidth;
+    let height=img.naturalHeight;
+
+    const scale=Math.min(
+      1,
+      maxWidth/width,
+      maxHeight/height
+    );
+
+    width=Math.round(width*scale);
+    height=Math.round(height*scale);
+
     const canvas=document.createElement("canvas");
-    canvas.width=img.naturalWidth;
-    canvas.height=img.naturalHeight;
+    canvas.width=width;
+    canvas.height=height;
 
     const ctx=canvas.getContext("2d");
-    ctx.drawImage(img,0,0);
+    ctx.drawImage(img,0,0,width,height);
 
-    return canvas.toDataURL("image/png");
+    return canvas.toDataURL("image/jpeg",0.82);
+
   }finally{
     URL.revokeObjectURL(url);
   }
@@ -760,7 +778,7 @@ for(let i=0;i<photoData.length;i+=4){
 
       doc.addImage(
         img.dataUrl,
-        "PNG",
+        "JPEG",
         x+(colW-img.iw)/2,
         y,
         img.iw,
