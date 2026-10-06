@@ -664,15 +664,38 @@ if(detailsError)throw detailsError;
   doc.setTextColor(23,33,43);
 
   const gap=8;
-  const colW=(content-gap)/2;
-  const maxH=80;
+const colW=(content-gap)/2;
+const maxH=65;
 
-  for(let i=0;i<photoData.length;i+=2){
+for(let i=0;i<photoData.length;i+=4){
 
-    const rowPhotos=photoData.slice(i,i+2);
+  const pageH=doc.internal.pageSize.getHeight();
+
+  if(i>0){
+    doc.addPage();
+    y=18;
+    doc.setFontSize(15);
+    doc.setFont(undefined,"bold");
+    doc.setTextColor(11,45,77);
+    doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y);
+    doc.setDrawColor(11,45,77);
+    doc.setLineWidth(.5);
+    doc.line(margin,y+3,W-margin,y+3);
+    y+=10;
+  }
+
+  const pagePhotos=photoData.slice(i,i+4);
+
+  for(let row=0;row<2;row++){
+
+    const rowPhotos=pagePhotos.slice(row*2,row*2+2);
+
+    if(!rowPhotos.length)break;
+
     const images=[];
 
     for(const ph of rowPhotos){
+
       const props=doc.getImageProperties(ph.dataUrl);
 
       let iw=colW;
@@ -683,17 +706,22 @@ if(detailsError)throw detailsError;
         iw=ih*props.width/props.height;
       }
 
-      images.push({dataUrl:ph.dataUrl,iw,ih});
+      images.push({
+  dataUrl:ph.dataUrl,
+  iw,
+  ih
+});
     }
 
     const rowH=Math.max(...images.map(img=>img.ih));
 
-    if(y+rowH>doc.internal.pageSize.getHeight()-margin){
+    if(y+rowH>pageH-margin){
       doc.addPage();
       y=18;
     }
 
     images.forEach((img,index)=>{
+
       const x=margin+index*(colW+gap);
 
       doc.addImage(
@@ -704,11 +732,13 @@ if(detailsError)throw detailsError;
         img.iw,
         img.ih
       );
+
     });
 
-    y+=rowH+10;
+    y+=rowH+12;
   }
 }
+
     const pdfBlob=doc.output("blob");
     const fileName=`${report.report_number}.pdf`;
     const path=`${reportId}/${fileName}`;
