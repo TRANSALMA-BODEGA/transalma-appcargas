@@ -879,7 +879,71 @@ for(const ph of photos||[]){
       const sg=sigData[role];if(sg?.dataUrl)doc.addImage(sg.dataUrl,"PNG",x+4,y+3,boxW-8,20);
       doc.setFont(undefined,"normal");doc.setFontSize(8);doc.text(role==="transportista"?"TRANSPORTISTA":"BODEGA / CHEQUEADOR",x+4,y+27);doc.text(String(sg?.signer_name||""),x+4,y+32);doc.setFontSize(10);
     }
-    y+=boxH+10;
+       y+=boxH+10;
+
+    if(report.report_type==="excepcion"){
+
+      const nota=
+        "Es importante señalar que conforme a nuestro procedimientos operativos y condiciones de servicio, cualquier reclamo relacionado con daños, faltantes o anomalías en la mercancía debe ser presentado dentro de las primeras 24-horas posteriores a la RECEPCIÓN o RETIRO de la carga, a fin de permitir una verificación oportuna de los hechos y la correspondiente documentación que sustente dicho retiro, ya que el transportista recibe conforme la carga.";
+
+      const notaWidth=content-8;
+      const notaX=margin+4;
+      const notaPadding=4;
+      const notaTextWidth=notaWidth-(notaPadding*2);
+
+      const notaLines=doc.splitTextToSize(
+        nota,
+        notaTextWidth
+      );
+
+      const notaLineHeight=4.2;
+      const notaHeight=
+        notaLines.length*notaLineHeight+
+        notaPadding*2+
+        8;
+
+      const pageH=doc.internal.pageSize.getHeight();
+
+      if(y+notaHeight>pageH-margin){
+
+        doc.addPage();
+        y=18;
+      }
+
+      doc.setDrawColor(150,160,170);
+      doc.setLineWidth(.4);
+
+      doc.rect(
+        notaX,
+        y,
+        notaWidth,
+        notaHeight
+      );
+
+      doc.setFont(undefined,"bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(23,33,43);
+
+      doc.text(
+        "NOTA",
+        notaX+notaPadding,
+        y+5
+      );
+
+      doc.setFont(undefined,"normal");
+
+      doc.text(
+        notaLines,
+        notaX+notaPadding,
+        y+10,
+        {
+          lineHeightFactor:1.15
+        }
+      );
+
+      y+=notaHeight+8;
+    }
+
     if(photoData.length){
   doc.addPage();
   y=18;
