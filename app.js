@@ -330,19 +330,88 @@ function renderPhotoPreview() {
     try{
       const {data:{user}}=await sup.auth.getUser();
       if(!user)throw new Error("La sesión expiró. Inicia sesión nuevamente.");
-      const t=$("reportType").value,r=$("reclamo24").value,b=$("bultos").value;
-      const p={
-        report_type:t,fecha:$("fecha").value,client_email:$("clientEmail").value.trim(),
-        consignatario:$("consignatario").value.trim(),bl:$("bl").value.trim()||null,
-        contenedor:$("contenedor").value.trim()||null,bultos:b===""?null:Number(b),
-        clase:$("clase").value.trim()||null,detalle:$("detalle").value.trim()||null,
-        observacion:$("observacion").value.trim()||null,
-        incidencias:t==="excepcion"?$("incidencias").value.trim()||null:null,
-        observacion_excepcion:t==="excepcion"?$("observacionExcepcion").value.trim()||null:null,
-        reclamo_dentro_24h:t==="excepcion"?(r===""?null:r==="true"):null,
-        transportista_nombre:$("transportista").value.trim()||null,bodega_nombre:$("bodega").value.trim()||null,
-        created_by:user.id,resultado:t==="excepcion"?"DESCARGA CON INCIDENCIA":"DESCARGA FINALIZADA CON ÉXITO"
-      };
+      const t=$("reportType").value;
+const r=$("reclamo24").value;
+
+let merchandiseDetails=[];
+
+if(t==="mercancia"){
+  merchandiseDetails=[
+    ...document.querySelectorAll(".merchandise-detail")
+  ].map((block,index)=>({
+    consignatario:block.querySelector(".detail-consignatario")?.value.trim()||"",
+    bl:block.querySelector(".detail-bl")?.value.trim()||null,
+    bultos:block.querySelector(".detail-bultos")?.value===""
+      ?null
+      :Number(block.querySelector(".detail-bultos").value),
+    clase_mercancia:block.querySelector(".detail-clase")?.value.trim()||null,
+    detalle_mercancia:block.querySelector(".detail-detalle")?.value.trim()||null,
+    observacion:block.querySelector(".detail-observacion")?.value.trim()||null,
+    sort_order:index+1
+  }));
+
+  merchandiseDetails=merchandiseDetails.filter(d=>d.consignatario);
+
+  if(!merchandiseDetails.length){
+    throw new Error("Agrega al menos un consignatario.");
+  }
+}
+
+const firstDetail=merchandiseDetails[0];
+
+const p={
+  report_type:t,
+  fecha:$("fecha").value,
+  client_email:$("clientEmail").value.trim(),
+
+  consignatario:t==="mercancia"
+    ?firstDetail.consignatario
+    :$("consignatario").value.trim(),
+
+  bl:t==="mercancia"
+    ?firstDetail.bl
+    :$("bl").value.trim()||null,
+
+  contenedor:$("contenedor").value.trim()||null,
+
+  bultos:t==="mercancia"
+    ?firstDetail.bultos
+    :(()=> {
+        const value=$("bultos").value;
+        return value===""?null:Number(value);
+      })(),
+
+  clase:t==="mercancia"
+    ?firstDetail.clase_mercancia
+    :$("clase").value.trim()||null,
+
+  detalle:t==="mercancia"
+    ?firstDetail.detalle_mercancia
+    :$("detalle").value.trim()||null,
+
+  observacion:t==="mercancia"
+    ?firstDetail.observacion
+    :$("observacion").value.trim()||null,
+
+  incidencias:t==="excepcion"?$("incidencias").value.trim()||null:null,
+
+  observacion_excepcion:t==="excepcion"
+    ?$("observacionExcepcion").value.trim()||null
+    :null,
+
+  reclamo_dentro_24h:t==="excepcion"
+    ?(r===""?null:r==="true")
+    :null,
+
+  transportista_nombre:$("transportista").value.trim()||null,
+  bodega_nombre:$("bodega").value.trim()||null,
+
+  created_by:user.id,
+
+  resultado:t==="excepcion"
+    ?"DESCARGA CON INCIDENCIA"
+    :"DESCARGA FINALIZADA CON ÉXITO"
+};
       if(!p.consignatario)throw new Error("El consignatario es obligatorio.");
       if(!p.client_email)throw new Error("El correo del cliente es obligatorio.");
       if(t==="excepcion"&&!p.incidencias)throw new Error("Para una excepción debes indicar la incidencia.");
@@ -352,7 +421,29 @@ function renderPhotoPreview() {
       const {data,error}=await sup.from("reports").insert(p).select().single();
       if(error)throw error;
       const reportId=data.id;
+if(t==="mercancia" && merchandiseDetails.length){
 
+  const detailRows=merchandiseDetails.map(detail=>({
+    report_id:reportId,
+    consignatario:detail.consignatario,
+    bl:detail.bl,
+    bultos:detail.bultos,
+    clase_mercancia:detail.clase_mercancia,
+    detalle_mercancia:detail.detalle_mercancia,
+    observacion:detail.observacion,
+    sort_order:detail.sort_order
+  }));
+
+  const {error:detailsError}=await sup
+    .from("report_merchandise_details")
+    .insert(detailRows);
+
+  if(detailsError){
+    throw new Error(
+      `No se pudieron guardar los consignatarios: ${detailsError.message}`
+    );
+  }
+}
       // La creación del reporte no debe bloquearse si falla únicamente la trazabilidad.
       const e1=await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"REPORTE_CREADO",p_message:`Reporte ${data.report_number} creado`});
       if(e1.error)console.warn("Reporte creado, pero no se pudo registrar REPORTE_CREADO:",e1.error);
