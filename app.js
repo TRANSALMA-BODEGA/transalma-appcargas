@@ -468,7 +468,28 @@ $("pdfActions").hidden=false;
   };
 
   function blobToDataUrl(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(blob)})}
+async function blobToPngDataUrl(blob){
+  const url=URL.createObjectURL(blob);
+  try{
+    const img=new Image();
+    img.src=url;
+    await new Promise((resolve,reject)=>{
+      img.onload=resolve;
+      img.onerror=reject;
+    });
 
+    const canvas=document.createElement("canvas");
+    canvas.width=img.naturalWidth;
+    canvas.height=img.naturalHeight;
+
+    const ctx=canvas.getContext("2d");
+    ctx.drawImage(img,0,0);
+
+    return canvas.toDataURL("image/png");
+  }finally{
+    URL.revokeObjectURL(url);
+  }
+}
   async function fetchReportAssets(reportId){
     const {data:report,error:reportError}=await sup.from("reports").select("*").eq("id",reportId).single();
     if(reportError)throw reportError;
@@ -484,7 +505,20 @@ if(detailsError)throw detailsError;
     const {data:sigs,error:sigError}=await sup.from("report_signatures").select("role,storage_path,signer_name").eq("report_id",reportId);
     if(sigError)throw sigError;
     const photoData=[];
-    for(const ph of photos||[]){const {data,error}=await sup.storage.from("report-photos").download(ph.storage_path);if(error)throw error;photoData.push({meta:ph,dataUrl:await blobToDataUrl(data)})}
+for(const ph of photos||[]){
+  const {data,error}=await sup.storage
+    .from("report-photos")
+    .download(ph.storage_path);
+
+  if(error)throw error;
+
+  const pngDataUrl=await blobToPngDataUrl(data);
+
+  photoData.push({
+    meta:ph,
+    dataUrl:pngDataUrl
+  });
+}
     const sigData={};
     for(const sg of sigs||[]){const {data,error}=await sup.storage.from("report-signatures").download(sg.storage_path);if(error)throw error;sigData[sg.role]={...sg,dataUrl:await blobToDataUrl(data)}}
     return {report,photoData,sigData,merchandiseDetails};
@@ -726,7 +760,7 @@ for(let i=0;i<photoData.length;i+=4){
 
       doc.addImage(
         img.dataUrl,
-        "JPEG",
+        "PNG",
         x+(colW-img.iw)/2,
         y,
         img.iw,
