@@ -569,86 +569,266 @@ for(const ph of photos||[]){
     }else{doc.setTextColor(23,33,43);doc.setFontSize(10)}
     if(report.report_type==="mercancia"){
 
-  const rows=[
-    ["FECHA DE ENTRADA",report.fecha],
-    ["CONTENEDOR",report.contenedor]
+  const colWidths=[53,31,10,45,41];
+  const colX=[
+    margin,
+    margin+53,
+    margin+84,
+    margin+94,
+    margin+139
   ];
 
-  for(const [label,value] of rows){
-    doc.setFont(undefined,"bold");
-    doc.text(label,margin,y);
-    doc.setFont(undefined,"normal");
-    doc.line(margin+43,y+1,W-margin,y+1);
-    doc.text(String(value??""),margin+46,y);
-    y+=9;
-  }
+  const tableWidth=180;
+  const pageH=doc.internal.pageSize.getHeight();
 
-  doc.setFont(undefined,"bold");
-  doc.text("DETALLE DE MERCANCÍA",margin,y);
+  doc.setDrawColor(0,0,0);
+  doc.setLineWidth(.35);
+  doc.setTextColor(0,0,0);
+  doc.setFontSize(9);
+
+  // Datos superiores con el estilo del Excel.
+  const drawHeaderLine=(label,value,x,y,width)=>{
+    doc.setFont(undefined,"bold");
+    doc.text(label,x,y);
+
+    const labelWidth=doc.getTextWidth(label);
+    const lineStart=x+labelWidth+2;
+
+    doc.setFont(undefined,"normal");
+
+    if(value){
+      doc.text(String(value),lineStart,y);
+      const valueWidth=doc.getTextWidth(String(value));
+      const lineStartValue=lineStart+valueWidth+2;
+
+      if(lineStartValue<x+width){
+        doc.line(lineStartValue,y+1,x+width,y+1);
+      }
+    }else{
+      doc.line(lineStart,y+1,x+width,y+1);
+    }
+  };
+
+  drawHeaderLine(
+    "CLIENTE:",
+    report.client_email||"",
+    margin,
+    y,
+    82
+  );
+
+  drawHeaderLine(
+    "FECHA:",
+    report.fecha||"",
+    margin+90,
+    y,
+    90
+  );
+
+  y+=7;
+
+  drawHeaderLine(
+    "VIAJE-VAPOR:",
+    report.vapor||"",
+    margin,
+    y,
+    82
+  );
+
+  drawHeaderLine(
+    "CONTENEDOR:",
+    report.contenedor||"",
+    margin+90,
+    y,
+    90
+  );
+
   y+=8;
 
-  for(const detail of merchandiseDetails||[]){
+  const drawMerchandiseBlock=(detail)=>{
 
-    const pageH=doc.internal.pageSize.getHeight();
+    const consignatarioLines=doc.splitTextToSize(
+      String(detail.consignatario||""),
+      colWidths[0]-4
+    );
 
-    if(y>pageH-margin-55){
+    const blLines=doc.splitTextToSize(
+      String(detail.bl||""),
+      colWidths[1]-4
+    );
+
+    const bultosLines=doc.splitTextToSize(
+      String(detail.bultos??""),
+      colWidths[2]-2
+    );
+
+    const claseLines=doc.splitTextToSize(
+      String(detail.clase_mercancia||""),
+      colWidths[3]-4
+    );
+
+    const observacionLines=doc.splitTextToSize(
+      String(detail.observacion||""),
+      colWidths[4]-4
+    );
+
+    const dataLines=Math.max(
+      consignatarioLines.length,
+      blLines.length,
+      bultosLines.length,
+      claseLines.length,
+      observacionLines.length,
+      1
+    );
+
+    const headerH=8;
+    const dataH=Math.max(11,dataLines*4.2+4);
+
+    const detailLines=doc.splitTextToSize(
+      String(detail.detalle_mercancia||""),
+      tableWidth-24
+    );
+
+    const detailH=Math.max(
+      13,
+      detailLines.length*4.5+6
+    );
+
+    const totalH=headerH+dataH+detailH+6;
+
+    if(y+totalH>pageH-margin){
+
       doc.addPage();
+
       y=18;
+
+      doc.setFontSize(13);
+      doc.setFont(undefined,"bold");
+      doc.setTextColor(11,45,77);
+      doc.text(
+        "REPORTE DE MERCANCÍA",
+        W/2,
+        y,
+        {align:"center"}
+      );
+
+      doc.setFontSize(9);
+      doc.setTextColor(0,0,0);
+
+      y+=9;
     }
 
-    doc.setFont(undefined,"bold");
-    doc.text(`CONSIGNATARIO ${detail.sort_order}`,margin,y);
-    y+=6;
+    // Encabezados de la tabla.
+    const headers=[
+      "CONSIGNATARIO",
+      "B/L",
+      "BULTOS",
+      "CLASE DE MERCANCÍA",
+      "OBSERVACIÓN"
+    ];
 
-    doc.setFont(undefined,"bold");
-    doc.text("CONSIGNATARIO",margin,y);
-    doc.setFont(undefined,"normal");
-    doc.text(String(detail.consignatario||""),margin+45,y);
-    y+=7;
+    for(let i=0;i<5;i++){
 
-    doc.setFont(undefined,"bold");
-    doc.text("BIL/B.L.",margin,y);
-    doc.setFont(undefined,"normal");
-    doc.text(String(detail.bl||""),margin+45,y);
+      doc.rect(
+        colX[i],
+        y,
+        colWidths[i],
+        headerH
+      );
 
-    doc.setFont(undefined,"bold");
-    doc.text("BULTOS",margin+105,y);
-    doc.setFont(undefined,"normal");
-    doc.text(String(detail.bultos??""),margin+135,y);
-    y+=7;
+      doc.setFont(undefined,"bold");
+      doc.setFontSize(8);
 
-    doc.setFont(undefined,"bold");
-    doc.text("CLASE DE MERCANCÍA",margin,y);
-    doc.setFont(undefined,"normal");
-    doc.text(String(detail.clase_mercancia||""),margin+55,y);
-    y+=7;
+      const align=i===0?"left":"center";
 
-    doc.setFont(undefined,"bold");
-    doc.text("DETALLE DE MERCANCÍA",margin,y);
-    y+=5;
-    y=addWrapped(
-      doc,
-      detail.detalle_mercancia||"",
+      doc.text(
+        headers[i],
+        align==="center"
+          ?colX[i]+colWidths[i]/2
+          :colX[i]+2,
+        y+5.5,
+        {align}
+      );
+    }
+
+    y+=headerH;
+
+    // Valores.
+    const values=[
+      consignatarioLines,
+      blLines,
+      bultosLines,
+      claseLines,
+      observacionLines
+    ];
+
+    for(let i=0;i<5;i++){
+
+      doc.rect(
+        colX[i],
+        y,
+        colWidths[i],
+        dataH
+      );
+
+      doc.setFont(undefined,"normal");
+      doc.setFontSize(8.5);
+
+      const lines=values[i];
+
+      const startY=
+        y+
+        Math.max(
+          4,
+          (dataH-(lines.length*4.2))/2+3
+        );
+
+      lines.forEach((line,index)=>{
+        doc.text(
+          line,
+          i===0
+            ?colX[i]+2
+            :colX[i]+colWidths[i]/2,
+          startY+index*4.2,
+          {
+            align:i===0?"left":"center"
+          }
+        );
+      });
+    }
+
+    y+=dataH;
+
+    // Línea MERCANCÍA del formato original.
+    doc.rect(
       margin,
       y,
-      content,
-      5
+      tableWidth,
+      detailH
     );
-    y+=4;
 
     doc.setFont(undefined,"bold");
-    doc.text("OBSERVACIÓN",margin,y);
-    y+=5;
-    y=addWrapped(
-      doc,
-      detail.observacion||"",
-      margin,
-      y,
-      content,
-      5
+    doc.setFontSize(8.5);
+
+    doc.text(
+      "MERCANCIA:",
+      margin+2,
+      y+5
     );
 
-    y+=8;
+    doc.setFont(undefined,"normal");
+
+    doc.text(
+      detailLines,
+      margin+23,
+      y+5
+    );
+
+    y+=detailH+6;
+  };
+
+  for(const detail of merchandiseDetails||[]){
+    drawMerchandiseBlock(detail);
   }
 
 }else{
