@@ -736,8 +736,11 @@ for(let i=0;i<photoData.length;i+=4){
     });
 
     y+=rowH+12;
-  }
 }
+}
+}
+
+const pdfBlob=doc.output("blob");
 
     const pdfBlob=doc.output("blob");
     const fileName=`${report.report_number}.pdf`;
