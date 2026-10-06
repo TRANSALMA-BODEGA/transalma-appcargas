@@ -867,7 +867,7 @@ $("sendReportEmail").onclick=async()=>{
     if(!data.length)return $("historyContent").textContent="No hay reportes registrados.";
     $("historyContent").innerHTML="<div class='table-wrap'><table><tr><th>Reporte</th><th>Fecha</th><th>Tipo</th><th>Contenedor</th><th>Consignatario</th><th>Resultado</th><th>Estado</th><th>PDF</th></tr>"+
       data.map(r=>`<tr><td>${esc(r.report_number)}</td><td>${esc(r.fecha)}</td><td>${esc(r.report_type)}</td><td>${esc(r.contenedor)}</td><td>${esc(r.consignatario)}</td><td>${esc(r.resultado)}</td><td><span class="status ${r.status==="ANULADO"?"status-danger":""}">${esc(r.status)}</span></td><td><button type="button" class="history-pdf" data-report-id="${esc(r.id)}">📄 PDF</button></td></tr>`).join("")+"</table></div>";
-    document.querySelectorAll(".history-pdf").forEach(btn=>btn.onclick=async()=>{btn.disabled=true;const old=btn.textContent;btn.textContent="Descargando...";try{await downloadStoredPdf(btn.dataset.id)}catch(e){alert(e.message)}finally{btn.disabled=false;btn.textContent=old}})
+    document.querySelectorAll(".history-pdf").forEach(btn=>btn.onclick=async()=>{btn.disabled=true;const old=btn.textContent;btn.textContent="Descargando...";try{await downloadStoredPdf(btn.dataset.reportId)}catch(e){alert(e.message)}finally{btn.disabled=false;btn.textContent=old}})
   }
 
   async function adminHistory(){
