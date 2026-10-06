@@ -740,8 +740,6 @@ for(let i=0;i<photoData.length;i+=4){
 }
 }
 
-const pdfBlob=doc.output("blob");
-
     const pdfBlob=doc.output("blob");
     const fileName=`${report.report_number}.pdf`;
     const path=`${reportId}/${fileName}`;
