@@ -473,6 +473,13 @@ $("pdfActions").hidden=false;
     const {data:report,error:reportError}=await sup.from("reports").select("*").eq("id",reportId).single();
     if(reportError)throw reportError;
     const {data:photos,error:photosError}=await sup.from("report_photos").select("storage_path,original_name,sort_order").eq("report_id",reportId).order("sort_order");
+    const {data:merchandiseDetails,error:detailsError}=await sup
+  .from("report_merchandise_details")
+  .select("*")
+  .eq("report_id",reportId)
+  .order("sort_order",{ascending:true});
+
+if(detailsError)throw detailsError;
     if(photosError)throw photosError;
     const {data:sigs,error:sigError}=await sup.from("report_signatures").select("role,storage_path,signer_name").eq("report_id",reportId);
     if(sigError)throw sigError;
@@ -480,7 +487,7 @@ $("pdfActions").hidden=false;
     for(const ph of photos||[]){const {data,error}=await sup.storage.from("report-photos").download(ph.storage_path);if(error)throw error;photoData.push({meta:ph,dataUrl:await blobToDataUrl(data)})}
     const sigData={};
     for(const sg of sigs||[]){const {data,error}=await sup.storage.from("report-signatures").download(sg.storage_path);if(error)throw error;sigData[sg.role]={...sg,dataUrl:await blobToDataUrl(data)}}
-    return {report,photoData,sigData};
+    return {report,photoData,sigData,merchandiseDetails};
   }
 
   function addWrapped(doc,text,x,y,maxWidth,lineHeight=6){
@@ -489,7 +496,7 @@ $("pdfActions").hidden=false;
 
   async function generatePdf(reportId){
     const {jsPDF}=window.jspdf;
-    const {report,photoData,sigData}=await fetchReportAssets(reportId);
+    const {report,photoData,sigData,merchandiseDetails}=await fetchReportAssets(reportId);
     const logoResponse=await fetch("logo.png");
     if(!logoResponse.ok)throw new Error("No se encontró el logo de TRANSALMA (logo.png).");
     const logoDataUrl=await blobToDataUrl(await logoResponse.blob());
@@ -508,10 +515,125 @@ $("pdfActions").hidden=false;
       doc.setTextColor(255,255,255);doc.setFontSize(11);doc.setFont(undefined,"bold");doc.text("REPORTE ANULADO",W/2,y+1,{align:"center"});
       y+=15;doc.setTextColor(23,33,43);doc.setFontSize(10);
     }else{doc.setTextColor(23,33,43);doc.setFontSize(10)}
-    const rows=[["FECHA DE ENTRADA",report.fecha],["CONTENEDOR",report.contenedor],["CONSIGNATARIO",report.consignatario],["BIL/B.L.",report.bl],["BULTOS",report.bultos],["CLASE DE MERCANCÍA",report.clase]];
-    for(const [label,value] of rows){doc.setFont(undefined,"bold");doc.text(label,margin,y);doc.setFont(undefined,"normal");doc.line(margin+43,y+1,W-margin,y+1);doc.text(String(value??""),margin+46,y);y+=9}
-    doc.setFont(undefined,"bold");doc.text("DETALLE DE MERCANCÍA",margin,y);y+=6;doc.setFont(undefined,"normal");y=addWrapped(doc,report.detalle||"",margin,y,content,5);y+=5;
-    doc.setFont(undefined,"bold");doc.text("OBSERVACIÓN",margin,y);y+=6;doc.setFont(undefined,"normal");y=addWrapped(doc,report.observacion||"",margin,y,content,5);y+=8;
+    if(report.report_type==="mercancia"){
+
+  const rows=[
+    ["FECHA DE ENTRADA",report.fecha],
+    ["CONTENEDOR",report.contenedor]
+  ];
+
+  for(const [label,value] of rows){
+    doc.setFont(undefined,"bold");
+    doc.text(label,margin,y);
+    doc.setFont(undefined,"normal");
+    doc.line(margin+43,y+1,W-margin,y+1);
+    doc.text(String(value??""),margin+46,y);
+    y+=9;
+  }
+
+  doc.setFont(undefined,"bold");
+  doc.text("DETALLE DE MERCANCÍA",margin,y);
+  y+=8;
+
+  for(const detail of merchandiseDetails||[]){
+
+    const pageH=doc.internal.pageSize.getHeight();
+
+    if(y>pageH-margin-55){
+      doc.addPage();
+      y=18;
+    }
+
+    doc.setFont(undefined,"bold");
+    doc.text(`CONSIGNATARIO ${detail.sort_order}`,margin,y);
+    y+=6;
+
+    doc.setFont(undefined,"bold");
+    doc.text("CONSIGNATARIO",margin,y);
+    doc.setFont(undefined,"normal");
+    doc.text(String(detail.consignatario||""),margin+45,y);
+    y+=7;
+
+    doc.setFont(undefined,"bold");
+    doc.text("BIL/B.L.",margin,y);
+    doc.setFont(undefined,"normal");
+    doc.text(String(detail.bl||""),margin+45,y);
+
+    doc.setFont(undefined,"bold");
+    doc.text("BULTOS",margin+105,y);
+    doc.setFont(undefined,"normal");
+    doc.text(String(detail.bultos??""),margin+135,y);
+    y+=7;
+
+    doc.setFont(undefined,"bold");
+    doc.text("CLASE DE MERCANCÍA",margin,y);
+    doc.setFont(undefined,"normal");
+    doc.text(String(detail.clase_mercancia||""),margin+55,y);
+    y+=7;
+
+    doc.setFont(undefined,"bold");
+    doc.text("DETALLE DE MERCANCÍA",margin,y);
+    y+=5;
+    y=addWrapped(
+      doc,
+      detail.detalle_mercancia||"",
+      margin,
+      y,
+      content,
+      5
+    );
+    y+=4;
+
+    doc.setFont(undefined,"bold");
+    doc.text("OBSERVACIÓN",margin,y);
+    y+=5;
+    y=addWrapped(
+      doc,
+      detail.observacion||"",
+      margin,
+      y,
+      content,
+      5
+    );
+
+    y+=8;
+  }
+
+}else{
+
+  const rows=[
+    ["FECHA DE ENTRADA",report.fecha],
+    ["CONTENEDOR",report.contenedor],
+    ["CONSIGNATARIO",report.consignatario],
+    ["BIL/B.L.",report.bl],
+    ["BULTOS",report.bultos],
+    ["CLASE DE MERCANCÍA",report.clase]
+  ];
+
+  for(const [label,value] of rows){
+    doc.setFont(undefined,"bold");
+    doc.text(label,margin,y);
+    doc.setFont(undefined,"normal");
+    doc.line(margin+43,y+1,W-margin,y+1);
+    doc.text(String(value??""),margin+46,y);
+    y+=9;
+  }
+
+  doc.setFont(undefined,"bold");
+  doc.text("DETALLE DE MERCANCÍA",margin,y);
+  y+=6;
+  doc.setFont(undefined,"normal");
+  y=addWrapped(doc,report.detalle||"",margin,y,content,5);
+  y+=5;
+
+  doc.setFont(undefined,"bold");
+  doc.text("OBSERVACIÓN",margin,y);
+  y+=6;
+  doc.setFont(undefined,"normal");
+  y=addWrapped(doc,report.observacion||"",margin,y,content,5);
+
+  y+=5;
+}
     doc.setFont(undefined,"bold");doc.text("RESULTADO",margin,y);doc.setFont(undefined,"normal");doc.text(String(report.resultado||""),margin+35,y);y+=10;
     if(report.report_type==="excepcion"){
       doc.setFont(undefined,"bold");doc.text("INCIDENCIA",margin,y);y+=6;doc.setFont(undefined,"normal");y=addWrapped(doc,report.incidencias||"",margin,y,content,5);y+=5;
