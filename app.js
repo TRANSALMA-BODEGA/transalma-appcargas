@@ -390,7 +390,7 @@ if (new Set(clientEmails.map(email => email.toLowerCase())).size !== clientEmail
 
 
 const p={
-  
+report_type:t,  
 fecha:$("fecha").value,
 client_name:clientName,
 client_email:clientEmails[0],
