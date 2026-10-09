@@ -619,27 +619,30 @@ for(const ph of photos||[]){
   doc.setFontSize(9);
 
   // Datos superiores con el estilo del Excel.
-  const drawHeaderLine=(label,value,x,y,width)=>{
-    doc.setFont(undefined,"bold");
-    doc.text(label,x,y);
+  
+const drawHeaderLine=(label,value,x,y,width)=>{
+  doc.setFont(undefined,"bold");
+  doc.text(label,x,y);
 
-    const labelWidth=doc.getTextWidth(label);
-    const lineStart=x+labelWidth+2;
+  const labelWidth=doc.getTextWidth(label);
+  const lineStart=x+labelWidth+3;
+  const lineEnd=x+width;
 
-    doc.setFont(undefined,"normal");
+  doc.setFont(undefined,"normal");
 
-    if(value){
-      doc.text(String(value),lineStart,y);
-      const valueWidth=doc.getTextWidth(String(value));
-      const lineStartValue=lineStart+valueWidth+2;
+  const valueText=String(value ?? "").trim();
+  const availableWidth=lineEnd-lineStart;
 
-      if(lineStartValue<x+width){
-        doc.line(lineStartValue,y+2,x+width,y+2);
-      }
-    }else{
-      doc.line(lineStart,y+2,x+width,y+2);
-    }
-  };
+  if(valueText){
+    const fittedValue=doc.splitTextToSize(valueText,availableWidth);
+    doc.text(fittedValue,lineStart,y);
+  }
+
+  doc.setDrawColor(120,130,140);
+  doc.setLineWidth(0.2);
+  doc.line(lineStart,y+3,lineEnd,y+3);
+};
+
 
   drawHeaderLine(
     "CLIENTE:",
