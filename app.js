@@ -634,10 +634,10 @@ for(const ph of photos||[]){
       const lineStartValue=lineStart+valueWidth+2;
 
       if(lineStartValue<x+width){
-        doc.line(lineStartValue,y+1,x+width,y+1);
+        doc.line(lineStartValue,y+2,x+width,y+2);
       }
     }else{
-      doc.line(lineStart,y+1,x+width,y+1);
+      doc.line(lineStart,y+2,x+width,y+2);
     }
   };
 
