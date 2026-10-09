@@ -121,7 +121,14 @@
       <label class="wide">Detalle de mercancía<textarea id="detalle"></textarea></label>
       <label class="wide">Observación<textarea id="observacion"></textarea></label>
         </div>
-      <label>Correo del cliente<input id="clientEmail" type="email" required></label>
+      <label>Nombre del cliente
+  <input id="clientName" type="text" maxlength="200" required>
+</label>
+<label>Correo
+  <textarea id="clientEmail" rows="3" required
+    placeholder="cliente@empresa.com, facturacion@empresa.com"></textarea>
+  <small>Hasta 10 direcciones, separadas por comas o punto y coma.</small>
+</label>
       <label>Transportista<input id="transportista" placeholder="Nombre completo"></label>
       <label>Bodega / Chequeador<input id="bodega" placeholder="Nombre completo"></label>
     </div>
@@ -238,7 +245,7 @@
   <form id="editForm">
     <input type="hidden" id="editReportId">
     <div class="grid">
-      <label>Fecha de entrada<input id="fecha" type="date" required></label>
+      <label>Fecha de entrada<input id="editFecha" type="date" required></label>
       <label>Contenedor<input id="editContenedor"></label>
       <label>Consignatario<input id="editConsignatario" required></label>
       <label>BIL/B.L.<input id="editBl"></label>
@@ -246,7 +253,8 @@
       <label>Clase de mercancía<input id="editClase"></label>
       <label class="wide">Detalle de mercancía<textarea id="editDetalle"></textarea></label>
       <label class="wide">Observación<textarea id="editObservacion"></textarea></label>
-      <label>Correo del cliente<input id="editClientEmail" type="email" required></label>
+      <label>Nombre del cliente<input id="editClientName" type="text" maxlength="200" required></label>
+       <label class="wide">Correo<textarea id="editClientEmails" rows="3" required placeholder="cliente@empresa.com, facturacion@empresa.com"></textarea><small>Hasta 10 direcciones, separadas por comas o punto y coma.</small></label>
       <label>Transportista<input id="editTransportista"></label>
       <label>Bodega / Chequeador<input id="editBodega"></label>
       <label class="wide">Incidencias<textarea id="editIncidencias"></textarea></label>
