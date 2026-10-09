@@ -43,67 +43,51 @@ th{background:#f5f8fa;white-space:nowrap}
 #loginMessage,#formMessage,#editMessage{min-height:20px}
 @media(max-width:900px){.cards{grid-template-columns:1fr 1fr}.signature-grid{grid-template-columns:1fr}}
 @media(max-width:800px){.cards,.grid{grid-template-columns:1fr}.wide{grid-column:auto}.shell{padding:12px}header{gap:12px;align-items:flex-start}.card{padding:18px}.photo-preview{grid-template-columns:repeat(2,1fr)}.actions-cell{min-width:250px}}
-
-/* TRANSALMA: corrección móvil para tablas administrativas */
 @media screen and (max-width: 600px) {
-  html,
-  body {
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-
-  .shell,
-  main,
-  .card,
-  section {
-    min-width: 0;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-
-  table {
-  width: 100%;
-  max-width: 100%;
-  border-collapse: collapse;
-}
-
-.table-wrap {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.table-wrap table {
-  min-width: 600px;
-}
-
-  table thead,
-  table tbody {
+  .table-wrap {
+    display: block;
     width: 100%;
-  }
-
-  table th,
-  table td {
-    white-space: normal;
-    overflow-wrap: anywhere;
-    vertical-align: middle;
-    padding: 10px 8px;
-  }
-
-  table tbody tr {
-    height: auto !important;
-    min-height: 0;
-  }
-
-  table input,
-  table select,
-  table button {
     max-width: 100%;
-    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
   }
 
-  button {
-    min-height: 44px;
+  .table-wrap table {
+    display: table;
+    width: max-content;
+    min-width: 700px;
+    max-width: none;
+    table-layout: auto;
+    border-collapse: collapse;
+  }
+
+  .table-wrap thead {
+    display: table-header-group;
+  }
+
+  .table-wrap tbody {
+    display: table-row-group;
+  }
+
+  .table-wrap tr {
+    display: table-row;
+    height: auto;
+  }
+
+  .table-wrap th,
+  .table-wrap td {
+    display: table-cell;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
+    padding: 12px 10px;
+    vertical-align: middle;
+  }
+
+  .table-wrap .actions-cell {
+    min-width: 300px;
+  }
+}
   }
 }
