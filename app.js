@@ -359,10 +359,42 @@ if(t==="mercancia"){
 
 const firstDetail=merchandiseDetails[0];
 
+const clientName = $("clientName").value.trim();
+
+const clientEmails = $("clientEmail").value
+  .split(/[;,\n]+/)
+  .map(email => email.trim())
+  .filter(Boolean);
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+if (!clientName) {
+  throw new Error("Ingresa el nombre del cliente.");
+}
+
+if (clientEmails.length === 0) {
+  throw new Error("Ingresa al menos un correo.");
+}
+
+if (clientEmails.length > 10) {
+  throw new Error("Puedes ingresar un máximo de 10 correos.");
+}
+
+if (clientEmails.some(email => !emailRegex.test(email))) {
+  throw new Error("Hay una dirección de correo no válida. Revísala.");
+}
+
+if (new Set(clientEmails.map(email => email.toLowerCase())).size !== clientEmails.length) {
+  throw new Error("Hay correos duplicados. Elimina las direcciones repetidas.");
+}
+
+
 const p={
-  report_type:t,
-  fecha:$("fecha").value,
-  client_email:$("clientEmail").value.trim(),
+  
+fecha:$("fecha").value,
+client_name:clientName,
+client_email:clientEmails[0],
+client_emails:clientEmails,
 
   consignatario:t==="mercancia"
     ?firstDetail.consignatario
@@ -611,7 +643,7 @@ for(const ph of photos||[]){
 
   drawHeaderLine(
     "CLIENTE:",
-    report.client_email||"",
+    report.client_name || "",
     margin,
     y,
     82
@@ -623,6 +655,16 @@ for(const ph of photos||[]){
     margin+90,
     y,
     90
+  );
+
+  y+=7;
+
+  drawHeaderLine(
+    "CORREO:",
+    (Array.isArray(report.client_emails)&&report.client_emails.length?report.client_emails:[report.client_email].filter(Boolean)).join("; "),
+    margin,
+    y,
+    180
   );
 
   y+=7;
@@ -1084,7 +1126,7 @@ $("sendReportEmail").onclick=async()=>{
 
   b.disabled=true;
   b.textContent="Enviando...";
-  msg("pdfMessage","Enviando reporte al cliente...");
+  msg("pdfMessage","Enviando reporte a los destinatarios registrados...");
 
   try{
     const {data,error}=await sup.functions.invoke("send-report-email",{
@@ -1147,47 +1189,6 @@ $("sendReportEmail").onclick=async()=>{
 
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-  $("sendReportEmail").onclick=async()=>{
-  if(!lastSavedReportId)return;
-
-  const b=$("sendReportEmail");
-  b.disabled=true;
-  const old=b.textContent;
-  b.textContent="Enviando…";
-  msg("pdfMessage","Enviando reporte al cliente…");
-
-  try{
-    const {data,error}=await sup.functions.invoke("send-report-email",{
-      body:{
-        report_id:lastSavedReportId
-      }
-    });
-
-    if(error)throw error;
-
-    if(data?.error){
-      throw new Error(data.error);
-    }
-
-    msg(
-      "pdfMessage",
-      data?.message||"Correo enviado correctamente al cliente."
-    );
-
-    b.textContent="✓ Enviado";
-  }
-  catch(error){
-    console.error("SEND_REPORT_EMAIL:",error);
-    msg(
-      "pdfMessage",
-      error.message||"No se pudo enviar el correo."
-    );
-    b.textContent=old;
-  }
-  finally{
-    b.disabled=false;
-  }
-};
   async function history(){
     const {data,error}=await sup.from("reports").select("id,report_number,fecha,report_type,contenedor,consignatario,status,resultado").order("created_at",{ascending:false}).limit(100);
     if(error)return $("historyContent").textContent=error.message;
@@ -1419,10 +1420,22 @@ async function saveUser(userId){
     $("editReportId").value=data.id;$("editReportLabel").textContent=`${data.report_number} · ${data.report_type}`;
     $("editFecha").value=data.fecha||"";$("editContenedor").value=data.contenedor||"";$("editConsignatario").value=data.consignatario||"";
     $("editBl").value=data.bl||"";$("editBultos").value=data.bultos??"";$("editClase").value=data.clase||"";
-    $("editDetalle").value=data.detalle||"";$("editObservacion").value=data.observacion||"";$("editClientEmail").value=data.client_email||"";
+    $("editDetalle").value=data.detalle||"";$("editObservacion").value=data.observacion||"";$("editClientName").value=data.client_name||"";$("editClientEmails").value=(Array.isArray(data.client_emails)&&data.client_emails.length?data.client_emails:[data.client_email].filter(Boolean)).join("; ");
     $("editTransportista").value=data.transportista_nombre||"";$("editBodega").value=data.bodega_nombre||"";
     $("editIncidencias").value=data.incidencias||"";$("editObservacionExcepcion").value=data.observacion_excepcion||"";
     $("editReclamo24").value=data.reclamo_dentro_24h==null?"":String(data.reclamo_dentro_24h);$("editReason").value="";msg("editMessage","");
+  }
+
+  function parseClientEmails(value){
+    return String(value||"").split(/[;,\n]+/).map(email=>email.trim()).filter(Boolean);
+  }
+  function validateClientEmails(emails){
+    const emailRegex=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if(!emails.length)throw new Error("Ingresa al menos un correo.");
+    if(emails.length>10)throw new Error("Puedes ingresar un máximo de 10 correos.");
+    if(emails.some(email=>!emailRegex.test(email)))throw new Error("Hay una dirección de correo no válida. Revísala.");
+    if(new Set(emails.map(email=>email.toLowerCase())).size!==emails.length)throw new Error("Hay correos duplicados. Elimina las direcciones repetidas.");
+    return emails;
   }
 
   function changed(oldValue,newValue){return String(oldValue??"")!==String(newValue??"")}
@@ -1437,15 +1450,19 @@ async function saveUser(userId){
     if(old.status==="ANULADO")return msg("editMessage","Un reporte anulado no se puede editar.");
 
     const r=$("editReclamo24").value;
+    const editClientName=$("editClientName").value.trim();
+    let editClientEmails;
+    try{editClientEmails=validateClientEmails(parseClientEmails($("editClientEmails").value));}catch(error){return msg("editMessage",error.message);}
+    if(!editClientName)return msg("editMessage","Ingresa el nombre del cliente.");
     const payload={
       fecha:$("editFecha").value,contenedor:$("editContenedor").value.trim()||null,consignatario:$("editConsignatario").value.trim(),
       bl:$("editBl").value.trim()||null,bultos:$("editBultos").value===""?null:Number($("editBultos").value),
       clase:$("editClase").value.trim()||null,detalle:$("editDetalle").value.trim()||null,observacion:$("editObservacion").value.trim()||null,
-      client_email:$("editClientEmail").value.trim(),transportista_nombre:$("editTransportista").value.trim()||null,bodega_nombre:$("editBodega").value.trim()||null,
+      client_name:editClientName,client_emails:editClientEmails,client_email:editClientEmails[0],transportista_nombre:$("editTransportista").value.trim()||null,bodega_nombre:$("editBodega").value.trim()||null,
       incidencias:$("editIncidencias").value.trim()||null,observacion_excepcion:$("editObservacionExcepcion").value.trim()||null,
       reclamo_dentro_24h:r===""?null:r==="true",status:"PENDIENTE",updated_at:new Date().toISOString()
     };
-    if(!payload.consignatario||!payload.client_email)return msg("editMessage","Consignatario y correo del cliente son obligatorios.");
+    if(!payload.consignatario||!payload.client_email)return msg("editMessage","Consignatario y correo son obligatorios.");
     const changes={};
     for(const k of Object.keys(payload)){if(k==="updated_at"||k==="status")continue;if(changed(old[k],payload[k]))changes[k]={antes:old[k]??null,despues:payload[k]??null}}
     if(!Object.keys(changes).length)return msg("editMessage","No se detectaron cambios.");
