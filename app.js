@@ -554,24 +554,50 @@ if(detailsError)throw detailsError;
     if(photosError)throw photosError;
     const {data:sigs,error:sigError}=await sup.from("report_signatures").select("role,storage_path,signer_name").eq("report_id",reportId);
     if(sigError)throw sigError;
-    const photoData=[];
-for(const ph of photos||[]){
-  const {data,error}=await sup.storage
-    .from("report-photos")
-    .download(ph.storage_path);
+    
+const photoResults = await Promise.all(
+  (photos || []).map(async (ph) => {
+    const { data, error } = await sup.storage
+      .from("report-photos")
+      .download(ph.storage_path);
 
-  if(error)throw error;
+    if (error) throw error;
 
-  const pngDataUrl=await blobToPngDataUrl(data);
+    const pngDataUrl = await blobToPngDataUrl(data);
 
-  photoData.push({
-    meta:ph,
-    dataUrl:pngDataUrl
-  });
+    return {
+      meta: ph,
+      dataUrl: pngDataUrl
+    };
+  })
+);
+
+const photoData = photoResults;
+
+const sigResults = await Promise.all(
+  (sigs || []).map(async (sg) => {
+    const { data, error } = await sup.storage
+      .from("report-signatures")
+      .download(sg.storage_path);
+
+    if (error) throw error;
+
+    return {
+      role: sg.role,
+      value: {
+        ...sg,
+        dataUrl: await blobToDataUrl(data)
+      }
+    };
+  })
+);
+
+const sigData = {};
+for (const item of sigResults) {
+  sigData[item.role] = item.value;
 }
-    const sigData={};
-    for(const sg of sigs||[]){const {data,error}=await sup.storage.from("report-signatures").download(sg.storage_path);if(error)throw error;sigData[sg.role]={...sg,dataUrl:await blobToDataUrl(data)}}
-    return {report,photoData,sigData,merchandiseDetails};
+
+return { report, photoData, sigData, merchandiseDetails };
   }
 
   function addWrapped(doc,text,x,y,maxWidth,lineHeight=6){
@@ -619,76 +645,85 @@ for(const ph of photos||[]){
   doc.setFontSize(9);
 
   // Datos superiores con el estilo del Excel.
-  
-const drawHeaderLine=(label,value,x,y,width)=>{
-  doc.setFont(undefined,"bold");
-  doc.text(label,x,y);
+  const drawHeaderLine = (label, value, x, y, width) => {
+  doc.setFont(undefined, "bold");
+  doc.text(label, x, y);
 
-  const labelWidth=doc.getTextWidth(label);
-  const lineStart=x+labelWidth+3;
-  const lineEnd=x+width;
+  const labelWidth = doc.getTextWidth(label);
+  const lineStart = x + labelWidth + 3;
+  const lineEnd = x + width;
 
-  doc.setFont(undefined,"normal");
+  doc.setFont(undefined, "normal");
 
-  const valueText=String(value ?? "").trim();
-  const availableWidth=lineEnd-lineStart;
+  const valueText = String(value ?? "").trim();
+  const availableWidth = lineEnd - lineStart;
 
-  if(valueText){
-    const fittedValue=doc.splitTextToSize(valueText,availableWidth);
-    doc.text(fittedValue,lineStart,y);
+  if (valueText) {
+    const fittedValue = doc.splitTextToSize(valueText, availableWidth);
+    doc.text(fittedValue, lineStart, y);
   }
 
-  doc.setDrawColor(120,130,140);
+  doc.setDrawColor(120, 130, 140);
   doc.setLineWidth(0.2);
-  doc.line(lineStart,y+3,lineEnd,y+3);
+  doc.line(lineStart, y + 3, lineEnd, y + 3);
 };
+      
 
+drawHeaderLine(
+  "CLIENTE:",
+  report.client_name || "",
+  margin,
+  y,
+  82
+);
 
-  drawHeaderLine(
-    "CLIENTE:",
-    report.client_name || "",
-    margin,
-    y,
-    82
-  );
+drawHeaderLine(
+  "FECHA:",
+  report.fecha || "",
+  margin + 90,
+  y,
+  90
+);
 
-  drawHeaderLine(
-    "FECHA:",
-    report.fecha||"",
-    margin+90,
-    y,
-    90
-  );
+y += 7;
 
-  y+=7;
+const emailText = (
+  Array.isArray(report.client_emails) && report.client_emails.length
+    ? report.client_emails
+    : [report.client_email].filter(Boolean)
+).join("; ");
 
-  drawHeaderLine(
-    "CORREO:",
-    (Array.isArray(report.client_emails)&&report.client_emails.length?report.client_emails:[report.client_email].filter(Boolean)).join("; "),
-    margin,
-    y,
-    180
-  );
+const emailLines = doc.splitTextToSize(emailText, 180 - 22);
+const emailHeight = Math.max(7, emailLines.length * 4.5);
 
-  y+=7;
+drawHeaderLine(
+  "CORREO:",
+  emailText,
+  margin,
+  y,
+  180
+);
 
-  drawHeaderLine(
-    "VIAJE-VAPOR:",
-    report.vapor||"",
-    margin,
-    y,
-    82
-  );
+y += emailHeight + 5;
 
-  drawHeaderLine(
-    "CONTENEDOR:",
-    report.contenedor||"",
-    margin+90,
-    y,
-    90
-  );
+drawHeaderLine(
+  "VIAJE-VAPOR:",
+  report.vapor || "",
+  margin,
+  y,
+  82
+);
 
-  y+=8;
+drawHeaderLine(
+  "CONTENEDOR:",
+  report.contenedor || "",
+  margin + 90,
+  y,
+  90
+);
+
+y += 8;
+
 
   const drawMerchandiseBlock=(detail)=>{
 
