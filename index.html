@@ -179,17 +179,20 @@
   <div class="head"><div><h2>Administración de reportes</h2><p class="hint">Edición, anulación, auditoría y eliminación controlada de pruebas.</p></div><button id="closeAdmin" type="button" class="secondary">Volver</button></div>
   <div id="adminContent">Cargando…</div>
 </section>
+
 <section id="usersPanel" class="card" hidden>
   <div class="head">
     <div>
       <h2>👥 Usuarios</h2>
       <p class="hint">Administración de usuarios internos.</p>
-    <div>
-  <button id="openCreateUser" type="button">➕ Nuevo usuario</button>
-  <button id="closeUsers" type="button" class="secondary">Volver</button>
-</div>
-  <div id="usersContent">Cargando…</div>
-      <div id="createUserPanel" class="card" hidden>
+    </div>
+    <button id="openCreateUser" type="button">➕ Nuevo usuario</button>
+    <button id="closeUsers" type="button" class="secondary">Volver</button>
+  </div>
+  
+<div id="usersContent">Cargando…</div>
+
+<div id="createUserPanel" class="card" hidden>
   <div class="head">
     <div>
       <h3>➕ Nuevo usuario</h3>
@@ -216,10 +219,14 @@
 
       <label>
         Rol
-        <select id="newUserRole">
-          <option value="operador">Operador</option>
-          <option value="admin">Administrador</option>
-        </select>
+        
+<select id="newUserRole">
+  <option value="operador">Operador</option>
+  <option value="supervisora">Supervisora</option>
+  <option value="observador">Observador</option>
+  <option value="admin">Administrador</option>
+</select>
+
       </label>
 
       <label>
