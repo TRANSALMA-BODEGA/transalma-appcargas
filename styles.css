@@ -43,3 +43,67 @@ th{background:#f5f8fa;white-space:nowrap}
 #loginMessage,#formMessage,#editMessage{min-height:20px}
 @media(max-width:900px){.cards{grid-template-columns:1fr 1fr}.signature-grid{grid-template-columns:1fr}}
 @media(max-width:800px){.cards,.grid{grid-template-columns:1fr}.wide{grid-column:auto}.shell{padding:12px}header{gap:12px;align-items:flex-start}.card{padding:18px}.photo-preview{grid-template-columns:repeat(2,1fr)}.actions-cell{min-width:250px}}
+
+/* TRANSALMA: corrección móvil para tablas administrativas */
+@media screen and (max-width: 600px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .shell,
+  main,
+  .card,
+  section {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+}
+
+.table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-wrap table {
+  min-width: 600px;
+}
+
+  table thead,
+  table tbody {
+    width: 100%;
+  }
+
+  table th,
+  table td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+    padding: 10px 8px;
+  }
+
+  table tbody tr {
+    height: auto !important;
+    min-height: 0;
+  }
+
+  table input,
+  table select,
+  table button {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  button {
+    min-height: 44px;
+  }
+}
