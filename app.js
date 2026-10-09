@@ -605,8 +605,10 @@ return { report, photoData, sigData, merchandiseDetails };
   }
 
   async function generatePdf(reportId){
+    console.time("PDF - Carga de recursos");
     const {jsPDF}=window.jspdf;
     const {report,photoData,sigData,merchandiseDetails}=await fetchReportAssets(reportId);
+    console.timeEnd("PDF - Carga de recursos");
     const logoResponse=await fetch("logo.png");
     if(!logoResponse.ok)throw new Error("No se encontró el logo de TRANSALMA (logo.png).");
     const logoDataUrl=await blobToDataUrl(await logoResponse.blob());
@@ -1115,17 +1117,19 @@ for(let i=0;i<photoData.length;i+=4){
 }
 }
 }
-
+console.time("PDF - Generación");
     const pdfBlob=doc.output("blob");
+    console.timeEnd("PDF - Generación");
     const fileName=`${report.report_number}.pdf`;
     const path=`${reportId}/${fileName}`;
 
     // Guardar primero el PDF en Storage.
+    console.time("PDF - Subida a Supabase");
     const {error:upError}=await sup.storage
       .from("report-pdfs")
       .upload(path,pdfBlob,{contentType:"application/pdf",upsert:true});
     if(upError)throw upError;
-
+console.timeEnd("PDF - Subida a Supabase");
     // Un reporte anulado debe conservar su estado ANULADO.
     const nextStatus=report.status==="ANULADO"?"ANULADO":"PDF_GENERADO";
     const {error:updError}=await sup
