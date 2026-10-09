@@ -5,7 +5,11 @@
   const msg=(id,t)=>{if($(id))$(id).textContent=t||""};
   const today=()=>new Date().toISOString().slice(0,10);
 
-  let currentUser=null,currentIsAdmin=false;
+  let currentUser=null;
+let currentRole=null;
+let currentIsAdmin=false;
+let currentCanOperate=false;
+let currentIsSupervisor=false;
 
 let lastSavedReportId=sessionStorage.getItem("lastSavedReportId");
 let lastSavedReportNumber=sessionStorage.getItem("lastSavedReportNumber");
@@ -33,13 +37,42 @@ let lastSavedReportNumber=sessionStorage.getItem("lastSavedReportNumber");
       $("userEmail").textContent=currentUser.email||"";
       setDate();
 
-      const {data:profile,error:profileError}=await sup.from("profiles").select("role,active,full_name").eq("id",currentUser.id).maybeSingle();
+      
+      const {data:profile,error:profileError}=await sup
+        .from("profiles")
+        .select("role,active,full_name")
+        .eq("id",currentUser.id)
+        .maybeSingle();
+
       if(profileError) console.error(profileError);
-      currentIsAdmin=!!(profile && profile.active && profile.role==="admin");
-      $("adminCard").hidden=!currentIsAdmin;
-      $("roleLabel").textContent=currentIsAdmin?"Administrador · puede registrar reportes y administrar reportes existentes.":"Seleccione el tipo de reporte.";
+
+      currentRole=profile?.active ? profile.role : null;
+      currentIsAdmin=currentRole==="admin";
+      currentIsSupervisor=currentRole==="supervisora";
+      currentCanOperate=["admin","supervisora","operador"].includes(currentRole);
+
+      $("adminCard").hidden=!(currentIsAdmin||currentIsSupervisor);
+
+$("openAdminUsers").hidden=!currentIsAdmin;
+
+document.querySelectorAll('.action[data-type="mercancia"], .action[data-type="excepcion"]').forEach(button => {
+  button.hidden=!currentCanOperate;
+});
+
+      $("roleLabel").textContent=
+        currentIsAdmin
+          ? "Administrador · control total del sistema."
+          : currentIsSupervisor
+            ? "Supervisora · gestión de reportes."
+            : currentRole==="observador"
+              ? "Observador · consulta de reportes y PDF."
+              : "Operador · registro de reportes.";
     }else{
-      currentUser=null;currentIsAdmin=false;
+      currentUser=null;
+currentRole=null;
+currentIsAdmin=false;
+currentCanOperate=false;
+currentIsSupervisor=false;
       $("loginView").hidden=false;
       $("appView").hidden=true;
     }
@@ -57,12 +90,21 @@ let lastSavedReportNumber=sessionStorage.getItem("lastSavedReportNumber");
   $("logout").onclick=async()=>{await sup.auth.signOut();closeAllPanels();await session();};
 
   document.querySelectorAll(".action").forEach(b=>b.onclick=async()=>{
+    
     const t=b.dataset.type;
+
+    if(!currentCanOperate && t!=="historial"){
+      alert("Tu perfil solo tiene permiso para consultar reportes.");
+      return;
+    }
+
     closeAllPanels();
+
     if(t==="historial"){
       $("historyPanel").hidden=false;
       return history();
     }
+
     $("formTitle").textContent=t==="mercancia"?"Reporte de Mercancía":"Reporte de Excepción";
     $("reportType").value=t;
     $("exceptionFields").hidden=t!=="excepcion";
@@ -326,6 +368,12 @@ function renderPhotoPreview() {
 
   $("reportForm").onsubmit=async e=>{
     e.preventDefault();
+    
+if(!currentCanOperate){
+  msg("formMessage","Tu perfil no tiene permiso para crear reportes.");
+  return;
+}
+
     const saveButton=$("saveReport");saveButton.disabled=true;msg("formMessage","Guardando reporte…");
     try{
       const {data:{user}}=await sup.auth.getUser();
@@ -605,6 +653,9 @@ return { report, photoData, sigData, merchandiseDetails };
   }
 
   async function generatePdf(reportId){
+    if(!currentCanOperate){
+  throw new Error("Tu perfil no tiene permiso para generar PDF.");
+}
     console.time("PDF - Carga de recursos");
     const {jsPDF}=window.jspdf;
     const {report,photoData,sigData,merchandiseDetails}=await fetchReportAssets(reportId);
@@ -1158,11 +1209,10 @@ console.timeEnd("PDF - Subida a Supabase");
     finally{b.disabled=false}
   };
 $("sendReportEmail").onclick=async()=>{
-  if(!lastSavedReportId){
-    msg("pdfMessage","Primero debes guardar el reporte.");
+    if(!currentCanOperate){
+    msg("pdfMessage","Tu perfil no tiene permiso para enviar correos.");
     return;
   }
-
   const b=$("sendReportEmail");
   const old=b.textContent;
 
@@ -1241,7 +1291,7 @@ $("sendReportEmail").onclick=async()=>{
   }
 
   async function adminHistory(){
-    if(!currentIsAdmin)return;
+    if(!(currentIsAdmin||currentIsSupervisor))return;
     closeAllPanels();$("adminPanel").hidden=false;$("adminContent").textContent="Cargando…";
     const {data,error}=await sup.from("reports").select("id,report_number,fecha,report_type,contenedor,consignatario,status,resultado,is_test,updated_at").order("created_at",{ascending:false}).limit(100);
     if(error)return $("adminContent").textContent=error.message;
@@ -1252,14 +1302,23 @@ $("sendReportEmail").onclick=async()=>{
         <td><span class="status ${r.status==="ANULADO"?"status-danger":""}">${esc(r.status)}</span></td>
         <td>${r.is_test?"Sí":"No"}</td>
         <td class="actions-cell">
+          
           <button type="button" class="admin-pdf" data-id="${esc(r.id)}">📄 PDF</button>
-          <button type="button" class="admin-edit" data-id="${esc(r.id)}" ${r.status==="ANULADO"?"disabled":""}>✏️ Editar</button>
-          <button type="button" class="admin-audit" data-id="${esc(r.id)}">🕘 Cambios</button>
-          <button type="button" class="admin-annul" data-id="${esc(r.id)}" ${r.status==="ANULADO"?"disabled":""}>🚫 Anular</button>
-          ${r.status==="EMAIL_ENVIADO" || r.status==="PDF_GENERADO"
-  ? `<button type="button" class="admin-resend" data-id="${esc(r.id)}">${r.status==="EMAIL_ENVIADO" ? "📧 Reenviar" : "📧 Enviar"}</button>`
-  : ""}
-          ${r.is_test?`<button type="button" class="admin-delete-test danger" data-id="${esc(r.id)}">🗑️ Eliminar prueba</button>`:""}
+          ${(currentIsAdmin||currentIsSupervisor)&&r.status!=="ANULADO"
+            ? `<button type="button" class="admin-edit" data-id="${esc(r.id)}">✏️ Editar</button>`
+            : ""}
+          ${currentIsAdmin
+            ? `<button type="button" class="admin-audit" data-id="${esc(r.id)}">🕘 Cambios</button>`
+            : ""}
+          ${(currentIsAdmin||currentIsSupervisor)&&r.status!=="ANULADO"
+            ? `<button type="button" class="admin-annul" data-id="${esc(r.id)}">🚫 Anular</button>`
+            : ""}
+          ${(currentIsAdmin||currentIsSupervisor)&&(r.status==="EMAIL_ENVIADO"||r.status==="PDF_GENERADO")
+            ? `<button type="button" class="admin-resend" data-id="${esc(r.id)}">${r.status==="EMAIL_ENVIADO"?"📧 Reenviar":"📧 Enviar"}</button>`
+            : ""}
+          ${currentIsAdmin&&r.is_test
+            ? `<button type="button" class="admin-delete-test danger" data-id="${esc(r.id)}">🗑️ Eliminar prueba</button>`
+            : ""}
         </td>
       </tr>`).join("")+"</table></div>";
 
@@ -1309,10 +1368,14 @@ async function usersAdmin(){
         </td>
         <td>${esc(u.email||"")}</td>
         <td>
-          <select class="user-role" data-id="${esc(u.id)}">
-            <option value="operador" ${u.role==="operador"?"selected":""}>Operador</option>
-            <option value="admin" ${u.role==="admin"?"selected":""}>Administrador</option>
-          </select>
+          
+<select class="user-role" data-id="${esc(u.id)}">
+  <option value="operador" ${u.role==="operador"?"selected":""}>Operador</option>
+  <option value="supervisora" ${u.role==="supervisora"?"selected":""}>Supervisora</option>
+  <option value="observador" ${u.role==="observador"?"selected":""}>Observador</option>
+  <option value="admin" ${u.role==="admin"?"selected":""}>Administrador</option>
+</select>
+
         </td>
         <td>
           <select class="user-active" data-id="${esc(u.id)}">
@@ -1454,7 +1517,7 @@ async function saveUser(userId){
   usersAdmin();
 }
   async function openEdit(reportId){
-    if(!currentIsAdmin)return;
+    if(!(currentIsAdmin||currentIsSupervisor))return;
     const {data,error}=await sup.from("reports").select("*").eq("id",reportId).single();
     if(error)return alert(error.message);
     if(data.status==="ANULADO")return alert("Un reporte anulado no se puede editar.");
@@ -1484,7 +1547,7 @@ async function saveUser(userId){
 
   $("editForm").onsubmit=async e=>{
     e.preventDefault();
-    if(!currentIsAdmin)return;
+    if(!(currentIsAdmin||currentIsSupervisor))return;
     const id=$("editReportId").value,reason=$("editReason").value.trim();
     if(!reason)return msg("editMessage","Indique el motivo de la corrección.");
     const {data:old,error:readError}=await sup.from("reports").select("*").eq("id",id).single();
@@ -1523,8 +1586,7 @@ async function saveUser(userId){
   };
 
   async function resendReport(reportId){
-  if(!currentIsAdmin)return;
-
+  if(!(currentIsAdmin||currentIsSupervisor))return;
   if(!confirm("¿Desea reenviar este reporte al correo registrado del cliente?")){
     return;
   }
@@ -1588,7 +1650,7 @@ async function saveUser(userId){
   }
 }
   async function annulReport(reportId){
-    if(!currentIsAdmin)return;
+    if(!(currentIsAdmin||currentIsSupervisor))return;
     const reason=prompt("Motivo de la anulación del reporte:");
     if(!reason||!reason.trim())return;
     if(!confirm("¿Confirmar ANULACIÓN? El reporte permanecerá en el historial."))return;
