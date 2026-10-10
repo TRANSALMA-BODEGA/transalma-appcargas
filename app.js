@@ -1548,45 +1548,157 @@ async function saveUser(userId){
 
   function changed(oldValue,newValue){return String(oldValue??"")!==String(newValue??"")}
 
-  $("editForm").onsubmit=async e=>{
-    e.preventDefault();
-    if(!(currentIsAdmin||currentIsSupervisor))return;
-    const id=$("editReportId").value,reason=$("editReason").value.trim();
-    if(!reason)return msg("editMessage","Indique el motivo de la corrección.");
-    const {data:old,error:readError}=await sup.from("reports").select("*").eq("id",id).single();
-    if(readError)return msg("editMessage",readError.message);
-    if(old.status==="ANULADO")return msg("editMessage","Un reporte anulado no se puede editar.");
+ 
+$("editForm").onsubmit=async e=>{
+  e.preventDefault();
+
+  if(!(currentIsAdmin||currentIsSupervisor))return;
+
+  const id=$("editReportId").value;
+  const reason=$("editReason").value.trim();
+  const button=$("saveEdit");
+
+  if(!reason)return msg("editMessage","Indique el motivo de la corrección.");
+
+  button.disabled=true;
+
+  try{
+    const {data:old,error:readError}=await sup
+      .from("reports").select("*").eq("id",id).single();
+
+    if(readError)throw readError;
+    if(old.status==="ANULADO")throw new Error("Un reporte anulado no se puede editar.");
+
+    const {data:oldDetails,error:detailsError}=await sup
+      .from("report_merchandise_details")
+      .select("*")
+      .eq("report_id",id)
+      .order("sort_order",{ascending:true});
+
+    if(detailsError)throw detailsError;
 
     const r=$("editReclamo24").value;
     const editClientName=$("editClientName").value.trim();
-    let editClientEmails;
-    try{editClientEmails=validateClientEmails(parseClientEmails($("editClientEmails").value));}catch(error){return msg("editMessage",error.message);}
-    if(!editClientName)return msg("editMessage","Ingresa el nombre del cliente.");
+    const editClientEmails=validateClientEmails(
+      parseClientEmails($("editClientEmails").value)
+    );
+
+    if(!editClientName)throw new Error("Ingresa el nombre del cliente.");
+
     const payload={
-      fecha:$("editFecha").value,contenedor:$("editContenedor").value.trim()||null,consignatario:$("editConsignatario").value.trim(),
-      bl:$("editBl").value.trim()||null,bultos:$("editBultos").value===""?null:Number($("editBultos").value),
-      clase:$("editClase").value.trim()||null,detalle:$("editDetalle").value.trim()||null,observacion:$("editObservacion").value.trim()||null,
-      client_name:editClientName,client_emails:editClientEmails,client_email:editClientEmails[0],transportista_nombre:$("editTransportista").value.trim()||null,bodega_nombre:$("editBodega").value.trim()||null,
-      incidencias:$("editIncidencias").value.trim()||null,observacion_excepcion:$("editObservacionExcepcion").value.trim()||null,
-      reclamo_dentro_24h:r===""?null:r==="true",status:"PENDIENTE",updated_at:new Date().toISOString()
+      fecha:$("editFecha").value,
+      contenedor:$("editContenedor").value.trim()||null,
+      consignatario:$("editConsignatario").value.trim(),
+      bl:$("editBl").value.trim()||null,
+      bultos:$("editBultos").value===""?null:String(Number($("editBultos").value)),
+      clase:$("editClase").value.trim()||null,
+      detalle:$("editDetalle").value.trim()||null,
+      observacion:$("editObservacion").value.trim()||null,
+      client_name:editClientName,
+      client_emails:editClientEmails,
+      client_email:editClientEmails[0],
+      transportista_nombre:$("editTransportista").value.trim()||null,
+      bodega_nombre:$("editBodega").value.trim()||null,
+      incidencias:$("editIncidencias").value.trim()||null,
+      observacion_excepcion:$("editObservacionExcepcion").value.trim()||null,
+      reclamo_dentro_24h:r===""?null:r==="true"
     };
-    if(!payload.consignatario||!payload.client_email)return msg("editMessage","Consignatario y correo son obligatorios.");
-    const changes={};
-    for(const k of Object.keys(payload)){if(k==="updated_at"||k==="status")continue;if(changed(old[k],payload[k]))changes[k]={antes:old[k]??null,despues:payload[k]??null}}
-    if(!Object.keys(changes).length)return msg("editMessage","No se detectaron cambios.");
-    changes.status={antes:old.status,despues:"PENDIENTE"};
 
-    const {error:updateError}=await sup.from("reports").update(payload).eq("id",id);
-    if(updateError)return msg("editMessage",updateError.message);
-
-    const {error:auditError}=await sup.rpc("log_report_change",{p_report_id:id,p_action:"EDITADO",p_reason:reason,p_changes:changes});
-    if(auditError){
-      await sup.from("reports").update({status:old.status}).eq("id",id);
-      return msg("editMessage","La corrección no se pudo registrar en auditoría. No se guardó el cambio.");
+    if(!payload.consignatario||!payload.client_email){
+      throw new Error("Consignatario y correo son obligatorios.");
     }
+
+    const details=(oldDetails||[]).map(d=>({
+      consignatario:d.consignatario,
+      bl:d.bl,
+      bultos:d.bultos,
+      clase_mercancia:d.clase_mercancia,
+      detalle_mercancia:d.detalle_mercancia,
+      observacion:d.observacion,
+      sort_order:d.sort_order
+    }));
+
+    // Actualiza el primer detalle con los campos editados.
+    // Conserva los consignatarios adicionales existentes.
+    if(old.report_type==="mercancia"){
+      if(!details.length){
+        details.push({
+          consignatario:payload.consignatario,
+          bl:payload.bl,
+          bultos:payload.bultos===null?null:Number(payload.bultos),
+          clase_mercancia:payload.clase,
+          detalle_mercancia:payload.detalle,
+          observacion:payload.observacion,
+          sort_order:0
+        });
+      }else{
+        details[0]={
+          ...details[0],
+          consignatario:payload.consignatario,
+          bl:payload.bl,
+          bultos:payload.bultos===null?null:Number(payload.bultos),
+          clase_mercancia:payload.clase,
+          detalle_mercancia:payload.detalle,
+          observacion:payload.observacion
+        };
+      }
+    }
+
+    const changes={};
+    for(const k of Object.keys(payload)){
+      if(changed(old[k],payload[k])){
+        changes[k]={
+          antes:old[k]??null,
+          despues:payload[k]??null
+        };
+      }
+    }
+
+    const oldDetailsForAudit=(oldDetails||[]).map(d=>({
+      consignatario:d.consignatario,
+      bl:d.bl,
+      bultos:d.bultos,
+      clase_mercancia:d.clase_mercancia,
+      detalle_mercancia:d.detalle_mercancia,
+      observacion:d.observacion,
+      sort_order:d.sort_order
+    }));
+
+    if(JSON.stringify(oldDetailsForAudit)!==JSON.stringify(details)){
+      changes.consignatarios={
+        antes:oldDetailsForAudit,
+        despues:details
+      };
+    }
+
+    if(old.status!=="PENDIENTE"){
+      changes.status={antes:old.status,despues:"PENDIENTE"};
+    }
+
+    if(!Object.keys(changes).length){
+      throw new Error("No se detectaron cambios.");
+    }
+
+    const {error:saveError}=await sup.rpc("save_report_edit_atomic",{
+      p_report_id:id,
+      p_reason:reason,
+      p_payload:payload,
+      p_changes:changes,
+      p_details:details
+    });
+
+    if(saveError)throw saveError;
+
     msg("editMessage","Corrección guardada y registrada en auditoría.");
     setTimeout(adminHistory,700);
-  };
+
+  }catch(error){
+    console.error("Error al editar reporte:",error);
+    msg("editMessage",error.message||"No se pudo guardar la corrección.");
+  }finally{
+    button.disabled=false;
+  }
+};
 
   async function resendReport(reportId){
   if(!(currentIsAdmin||currentIsSupervisor))return;
