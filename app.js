@@ -1519,19 +1519,144 @@ async function saveUser(userId){
   alert("Usuario actualizado correctamente.");
   usersAdmin();
 }
+  
+  function createEditDetailRow(detail={}){
+    const list=$("editDetailsList");
+    const row=document.createElement("div");
+    row.className="card edit-detail-row";
+    row.style.marginBottom="14px";
+
+    const heading=document.createElement("h4");
+    heading.textContent="Consignatario";
+    row.appendChild(heading);
+
+    const fields=[
+      ["Consignatario","consignatario",detail.consignatario||"",true],
+      ["B/L","bl",detail.bl||"",false],
+      ["Bultos","bultos",detail.bultos??"",false],
+      ["Clase de mercancía","clase_mercancia",detail.clase_mercancia||"",false],
+      ["Detalle de mercancía","detalle_mercancia",detail.detalle_mercancia||"",false],
+      ["Observación","observacion",detail.observacion||"",false]
+    ];
+
+    fields.forEach(([label,key,value,required])=>{
+      const wrap=document.createElement("label");
+      wrap.textContent=label;
+
+      const control=(key==="detalle_mercancia"||key==="observacion")
+        ?document.createElement("textarea")
+        :document.createElement("input");
+
+      control.className="edit-detail-field";
+      control.dataset.field=key;
+      control.value=value;
+
+      if(key==="bultos"){
+        control.type="number";
+        control.min="0";
+        control.step="1";
+      }
+
+      if(required)control.required=true;
+
+      wrap.appendChild(control);
+      row.appendChild(wrap);
+    });
+
+    const remove=document.createElement("button");
+    remove.type="button";
+    remove.className="secondary remove-edit-detail";
+    remove.textContent="Quitar consignatario";
+
+    remove.addEventListener("click",()=>{
+      if(list.querySelectorAll(".edit-detail-row").length<=1){
+        return alert("Debe conservar al menos un consignatario.");
+      }
+      row.remove();
+    });
+
+    row.appendChild(remove);
+    list.appendChild(row);
+  }
+
+  $("addEditDetail").addEventListener("click",()=>{
+    createEditDetailRow({});
+  });
+
   async function openEdit(reportId){
     if(!(currentIsAdmin||currentIsSupervisor))return;
-    const {data,error}=await sup.from("reports").select("*").eq("id",reportId).single();
+
+    const {data,error}=await sup
+      .from("reports").select("*").eq("id",reportId).single();
+
     if(error)return alert(error.message);
-    if(data.status==="ANULADO")return alert("Un reporte anulado no se puede editar.");
-    closeAllPanels();$("editPanel").hidden=false;
-    $("editReportId").value=data.id;$("editReportLabel").textContent=`${data.report_number} · ${data.report_type}`;
-    $("editFecha").value=data.fecha||"";$("editContenedor").value=data.contenedor||"";$("editConsignatario").value=data.consignatario||"";
-    $("editBl").value=data.bl||"";$("editBultos").value=data.bultos??"";$("editClase").value=data.clase||"";
-    $("editDetalle").value=data.detalle||"";$("editObservacion").value=data.observacion||"";$("editClientName").value=data.client_name||"";$("editClientEmails").value=(Array.isArray(data.client_emails)&&data.client_emails.length?data.client_emails:[data.client_email].filter(Boolean)).join("; ");
-    $("editTransportista").value=data.transportista_nombre||"";$("editBodega").value=data.bodega_nombre||"";
-    $("editIncidencias").value=data.incidencias||"";$("editObservacionExcepcion").value=data.observacion_excepcion||"";
-    $("editReclamo24").value=data.reclamo_dentro_24h==null?"":String(data.reclamo_dentro_24h);$("editReason").value="";msg("editMessage","");
+    if(data.status==="ANULADO"){
+      return alert("Un reporte anulado no se puede editar.");
+    }
+
+    let details=[];
+
+    if(data.report_type==="mercancia"){
+      const {data:rows,error:detailError}=await sup
+        .from("report_merchandise_details")
+        .select("*")
+        .eq("report_id",reportId)
+        .order("sort_order",{ascending:true});
+
+      if(detailError)return alert(detailError.message);
+
+      details=rows||[];
+
+      if(!details.length){
+        details=[{
+          consignatario:data.consignatario||"",
+          bl:data.bl||"",
+          bultos:data.bultos??"",
+          clase_mercancia:data.clase_mercancia||data.clase||"",
+          detalle_mercancia:data.detalle_mercancia||data.detalle||"",
+          observacion:data.observacion||"",
+          sort_order:1
+        }];
+      }
+    }
+
+    closeAllPanels();
+    $("editPanel").hidden=false;
+
+    $("editReportId").value=data.id;
+    $("editReportLabel").textContent=
+      `${data.report_number} · ${data.report_type}`;
+
+    $("editFecha").value=data.fecha||"";
+    $("editContenedor").value=data.contenedor||"";
+    $("editClientName").value=data.client_name||"";
+
+    $("editClientEmails").value=(
+      Array.isArray(data.client_emails)&&data.client_emails.length
+        ?data.client_emails
+        :[data.client_email].filter(Boolean)
+    ).join("; ");
+
+    $("editTransportista").value=data.transportista_nombre||"";
+    $("editBodega").value=data.bodega_nombre||"";
+    $("editIncidencias").value=data.incidencias||"";
+    $("editObservacionExcepcion").value=
+      data.observacion_excepcion||"";
+
+    $("editReclamo24").value=
+      data.reclamo_dentro_24h==null
+        ?""
+        :String(data.reclamo_dentro_24h);
+
+    $("editReason").value="";
+    msg("editMessage","");
+
+    const list=$("editDetailsList");
+    list.replaceChildren();
+
+    if(data.report_type==="mercancia"){
+      details.forEach(detail=>createEditDetailRow(detail));
+    }
   }
 
   function parseClientEmails(value){
