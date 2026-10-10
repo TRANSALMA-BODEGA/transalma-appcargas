@@ -1622,7 +1622,8 @@ async function saveUser(userId){
 
     closeAllPanels();
     $("editPanel").hidden=false;
-
+$("editMerchandiseSection").hidden =
+  data.report_type !== "mercancia";
     $("editReportId").value=data.id;
     $("editReportLabel").textContent=
       `${data.report_number} · ${data.report_type}`;
