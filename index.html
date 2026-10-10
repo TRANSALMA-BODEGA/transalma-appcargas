@@ -254,12 +254,15 @@
     <div class="grid">
       <label>Fecha de entrada<input id="editFecha" type="date" required></label>
       <label>Contenedor<input id="editContenedor"></label>
-      <label>Consignatario<input id="editConsignatario" required></label>
-      <label>BIL/B.L.<input id="editBl"></label>
-      <label>Bultos<input id="editBultos" type="number" min="0" step="1"></label>
-      <label>Clase de mercancía<input id="editClase"></label>
-      <label class="wide">Detalle de mercancía<textarea id="editDetalle"></textarea></label>
-      <label class="wide">Observación<textarea id="editObservacion"></textarea></label>
+      
+      <div class="wide">
+        <h3>Detalles de mercancía y consignatarios</h3>
+        <p class="hint">Cada consignatario tiene sus propios datos de B/L, bultos, clase, detalle y observación.</p>
+        <div id="editDetailsList"></div>
+        <button id="addEditDetail" type="button" class="secondary">
+          + Añadir consignatario
+        </button>
+      </div>
       <label>Nombre del cliente<input id="editClientName" type="text" maxlength="200" required></label>
        <label class="wide">Correo<textarea id="editClientEmails" rows="3" required placeholder="cliente@empresa.com, facturacion@empresa.com"></textarea><small>Hasta 10 direcciones, separadas por comas o punto y coma.</small></label>
       <label>Transportista<input id="editTransportista"></label>
