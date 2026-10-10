@@ -1694,79 +1694,99 @@ $("editForm").onsubmit=async e=>{
     if(readError)throw readError;
     if(old.status==="ANULADO")throw new Error("Un reporte anulado no se puede editar.");
 
-    const {data:oldDetails,error:detailsError}=await sup
-      .from("report_merchandise_details")
-      .select("*")
-      .eq("report_id",id)
-      .order("sort_order",{ascending:true});
+    
+    const isMerchandise = old.report_type === "mercancia";
+    let oldDetails = [];
 
-    if(detailsError)throw detailsError;
+    if (isMerchandise) {
+      const { data: rows, error: detailsError } = await sup
+        .from("report_merchandise_details")
+        .select("*")
+        .eq("report_id", id)
+        .order("sort_order", { ascending: true });
 
-    const r=$("editReclamo24").value;
-    const editClientName=$("editClientName").value.trim();
-    const editClientEmails=validateClientEmails(
+      if (detailsError) throw detailsError;
+
+      oldDetails = rows || [];
+    }
+
+    const detailRows = isMerchandise
+      ? [...document.querySelectorAll("#editDetailsList .edit-detail-row")]
+      : [];
+
+    const details = detailRows.map((row, index) => {
+      const field = key => row.querySelector(
+        `.edit-detail-field[data-field="${key}"]`
+      );
+
+      const consignatario = field("consignatario")?.value.trim() || "";
+
+      if (!consignatario) {
+        throw new Error(`Falta el consignatario ${index + 1}.`);
+      }
+
+      const bultosValue = field("bultos")?.value ?? "";
+
+      if (bultosValue !== "" &&
+          (!Number.isInteger(Number(bultosValue)) || Number(bultosValue) < 0)) {
+        throw new Error(`Los bultos del consignatario ${index + 1} no son válidos.`);
+      }
+
+      return {
+        consignatario,
+        bl: field("bl")?.value.trim() || null,
+        bultos: bultosValue === "" ? null : Number(bultosValue),
+        clase_mercancia: field("clase_mercancia")?.value.trim() || null,
+        detalle_mercancia: field("detalle_mercancia")?.value.trim() || null,
+        observacion: field("observacion")?.value.trim() || null,
+        sort_order: index + 1
+      };
+    });
+
+    if (isMerchandise && details.length === 0) {
+      throw new Error("Debe conservar al menos un consignatario.");
+    }
+
+    const first = details[0];
+
+    const r = $("editReclamo24").value;
+    const editClientName = $("editClientName").value.trim();
+    const editClientEmails = validateClientEmails(
       parseClientEmails($("editClientEmails").value)
     );
 
-    if(!editClientName)throw new Error("Ingresa el nombre del cliente.");
-
-    const payload={
-      fecha:$("editFecha").value,
-      contenedor:$("editContenedor").value.trim()||null,
-      consignatario:$("editConsignatario").value.trim(),
-      bl:$("editBl").value.trim()||null,
-      bultos:$("editBultos").value===""?null:String(Number($("editBultos").value)),
-      clase:$("editClase").value.trim()||null,
-      detalle:$("editDetalle").value.trim()||null,
-      observacion:$("editObservacion").value.trim()||null,
-      client_name:editClientName,
-      client_emails:editClientEmails,
-      client_email:editClientEmails[0],
-      transportista_nombre:$("editTransportista").value.trim()||null,
-      bodega_nombre:$("editBodega").value.trim()||null,
-      incidencias:$("editIncidencias").value.trim()||null,
-      observacion_excepcion:$("editObservacionExcepcion").value.trim()||null,
-      reclamo_dentro_24h:r===""?null:r==="true"
-    };
-
-    if(!payload.consignatario||!payload.client_email){
-      throw new Error("Consignatario y correo son obligatorios.");
+    if (!editClientName) {
+    throw new Error("Ingresa el nombre del cliente.");
     }
 
-    const details=(oldDetails||[]).map(d=>({
-      consignatario:d.consignatario,
-      bl:d.bl,
-      bultos:d.bultos,
-      clase_mercancia:d.clase_mercancia,
-      detalle_mercancia:d.detalle_mercancia,
-      observacion:d.observacion,
-      sort_order:d.sort_order
-    }));
+    const payload = {
+      fecha: $("editFecha").value,
+      contenedor: $("editContenedor").value.trim() || null,
 
-    // Actualiza el primer detalle con los campos editados.
-    // Conserva los consignatarios adicionales existentes.
-    if(old.report_type==="mercancia"){
-      if(!details.length){
-        details.push({
-          consignatario:payload.consignatario,
-          bl:payload.bl,
-          bultos:payload.bultos===null?null:Number(payload.bultos),
-          clase_mercancia:payload.clase,
-          detalle_mercancia:payload.detalle,
-          observacion:payload.observacion,
-          sort_order:0
-        });
-      }else{
-        details[0]={
-          ...details[0],
-          consignatario:payload.consignatario,
-          bl:payload.bl,
-          bultos:payload.bultos===null?null:Number(payload.bultos),
-          clase_mercancia:payload.clase,
-          detalle_mercancia:payload.detalle,
-          observacion:payload.observacion
-        };
-      }
+      // Mercancía: datos del primer consignatario.
+      // Excepción: conservar los datos existentes que no tienen campos editables.
+      consignatario: isMerchandise ? first.consignatario : old.consignatario,
+      bl: isMerchandise ? first.bl : old.bl,
+      bultos: isMerchandise
+        ? (first.bultos === null ? null : String(first.bultos))
+        : old.bultos,
+      clase: isMerchandise ? first.clase_mercancia : old.clase,
+      detalle: isMerchandise ? first.detalle_mercancia : old.detalle,
+      observacion: isMerchandise ? first.observacion : old.observacion,
+
+      client_name: editClientName,
+      client_emails: editClientEmails,
+      client_email: editClientEmails[0],
+      transportista_nombre: $("editTransportista").value.trim() || null,
+      bodega_nombre: $("editBodega").value.trim() || null,
+      incidencias: $("editIncidencias").value.trim() || null,
+      observacion_excepcion:
+        $("editObservacionExcepcion").value.trim() || null,
+      reclamo_dentro_24h: r === "" ? null : r === "true"
+    };
+
+    if (!payload.client_email) {
+      throw new Error("El correo del cliente es obligatorio.");
     }
 
     const changes={};
@@ -1779,20 +1799,24 @@ $("editForm").onsubmit=async e=>{
       }
     }
 
-    const oldDetailsForAudit=(oldDetails||[]).map(d=>({
-      consignatario:d.consignatario,
-      bl:d.bl,
-      bultos:d.bultos,
-      clase_mercancia:d.clase_mercancia,
-      detalle_mercancia:d.detalle_mercancia,
-      observacion:d.observacion,
-      sort_order:d.sort_order
+    
+    const normalizeDetailsForAudit = rows => (rows || []).map(d => ({
+      consignatario: (d.consignatario || "").trim(),
+      bl: d.bl || null,
+      bultos: d.bultos == null || d.bultos === "" ? null : Number(d.bultos),
+      clase_mercancia: d.clase_mercancia || null,
+      detalle_mercancia: d.detalle_mercancia || null,
+      observacion: d.observacion || null,
+      sort_order: Number(d.sort_order || 0)
     }));
 
-    if(JSON.stringify(oldDetailsForAudit)!==JSON.stringify(details)){
-      changes.consignatarios={
-        antes:oldDetailsForAudit,
-        despues:details
+    const oldDetailsForAudit = normalizeDetailsForAudit(oldDetails);
+    const newDetailsForAudit = normalizeDetailsForAudit(details);
+
+    if (JSON.stringify(oldDetailsForAudit) !== JSON.stringify(newDetailsForAudit)) {
+      changes.consignatarios = {
+        antes: oldDetailsForAudit,
+        despues: newDetailsForAudit
       };
     }
 
