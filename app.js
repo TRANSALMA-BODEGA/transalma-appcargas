@@ -159,6 +159,9 @@ legacyIds.forEach(id=>{
     merchandiseDetails.hidden=type!=="mercancia";
   }
 
+  const generalPhotosSection=$("generalPhotosSection");
+  if(generalPhotosSection) generalPhotosSection.hidden=type==="mercancia";
+
   const merchandiseList=$("merchandiseDetailsList");
 
   if(merchandiseList){
@@ -195,6 +198,17 @@ legacyIds.forEach(id=>{
             <textarea class="detail-observacion"></textarea>
           </label>
 
+        <section class="detail-photos wide">
+          <h4>Fotografías de este consignatario</h4>
+          <p class="hint">Las fotos de este bloque se identificarán con su B/L en el PDF.</p>
+          <div class="photo-actions">
+            <button type="button" class="detail-take-photo">📷 Tomar fotografía</button>
+            <button type="button" class="detail-gallery-photo">🖼️ Añadir desde galería</button>
+          </div>
+          <input type="file" class="detail-camera-input" accept="image/*" capture="environment" hidden>
+          <input type="file" class="detail-gallery-input" accept="image/*" multiple hidden>
+          <div class="photo-preview detail-photo-preview"></div>
+        </section>
         </div>
 
       </div>
@@ -203,6 +217,7 @@ legacyIds.forEach(id=>{
 
   selectedPhotos=[];
   $("photoPreview").innerHTML="";
+  document.querySelectorAll(".merchandise-detail").forEach(block=>{block._selectedPhotos=[];renderDetailPhotoPreview(block);});
 
   clearSignature("sigTransportista");
   clearSignature("sigBodega");
@@ -277,8 +292,38 @@ $("addMerchandiseDetail").addEventListener("click",()=>{
     });
   };
 
+  block._selectedPhotos=[];
   list.appendChild(block);
+  renderDetailPhotoPreview(block);
 });
+
+// Captura independiente de fotografías por consignatario.
+document.addEventListener("click",event=>{
+  const block=event.target.closest(".merchandise-detail");
+  if(!block)return;
+  if(event.target.closest(".detail-take-photo")) block.querySelector(".detail-camera-input")?.click();
+  if(event.target.closest(".detail-gallery-photo")) block.querySelector(".detail-gallery-input")?.click();
+});
+document.addEventListener("change",event=>{
+  if(!event.target.matches(".detail-camera-input,.detail-gallery-input"))return;
+  const block=event.target.closest(".merchandise-detail");
+  if(!block)return;
+  block._selectedPhotos=[...(block._selectedPhotos||[]),...Array.from(event.target.files||[])];
+  event.target.value="";
+  renderDetailPhotoPreview(block);
+});
+function renderDetailPhotoPreview(block){
+  const preview=block.querySelector(".detail-photo-preview");
+  if(!preview)return;
+  preview.innerHTML="";
+  (block._selectedPhotos||[]).forEach((file,index)=>{
+    const wrapper=document.createElement("div");wrapper.className="photo-item";
+    const img=document.createElement("img");img.alt=file.name;img.src=URL.createObjectURL(file);
+    const remove=document.createElement("button");remove.type="button";remove.className="remove-photo";remove.textContent="✕ Eliminar";
+    remove.onclick=()=>{block._selectedPhotos.splice(index,1);renderDetailPhotoPreview(block);};
+    wrapper.append(img,remove);preview.appendChild(wrapper);
+  });
+}
 $("galleryPhotoBtn").addEventListener("click", () => {
   $("photos").click();
 });
@@ -346,12 +391,14 @@ function renderPhotoPreview() {
   setupSignature("sigTransportista");setupSignature("sigBodega");
   document.querySelectorAll(".clear-signature").forEach(b=>b.onclick=()=>clearSignature(b.dataset.canvas));
 
-  async function uploadPhoto(reportId,file,index){
+  async function uploadPhoto(reportId,file,index,merchandiseDetailId=null){
     const ext=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";
     const path=`${reportId}/${crypto.randomUUID()}.${ext}`;
     const {error}=await sup.storage.from("report-photos").upload(path,file,{contentType:file.type||"image/jpeg",upsert:false});
     if(error)throw error;
-    const {error:dbError}=await sup.from("report_photos").insert({report_id:reportId,storage_path:path,original_name:file.name,mime_type:file.type||"image/jpeg",sort_order:index+1});
+    const photoRow={report_id:reportId,storage_path:path,original_name:file.name,mime_type:file.type||"image/jpeg",sort_order:index+1};
+    if(merchandiseDetailId) photoRow.merchandise_detail_id=merchandiseDetailId;
+    const {error:dbError}=await sup.from("report_photos").insert(photoRow);
     if(dbError)throw new Error(`No se pudo guardar la fotografía en report_photos: ${dbError.message||"error RLS"}`);
   }
 
@@ -387,6 +434,7 @@ if(t==="mercancia"){
   merchandiseDetails=[
     ...document.querySelectorAll(".merchandise-detail")
   ].map((block,index)=>({
+    sourceBlock:block,
     consignatario:block.querySelector(".detail-consignatario")?.value.trim()||"",
     bl:block.querySelector(".detail-bl")?.value.trim()||null,
     bultos:block.querySelector(".detail-bultos")?.value===""
@@ -399,6 +447,8 @@ if(t==="mercancia"){
   }));
 
   merchandiseDetails=merchandiseDetails.filter(d=>d.consignatario);
+  const photoWithoutConsignee=detailPhotoBlocks.find(block=>(block._selectedPhotos||[]).length && !block.querySelector(".detail-consignatario")?.value.trim());
+  if(photoWithoutConsignee) throw new Error("Completa el nombre del consignatario antes de adjuntar sus fotografías.");
 
   if(!merchandiseDetails.length){
     throw new Error("Agrega al menos un consignatario.");
@@ -495,8 +545,13 @@ client_emails:clientEmails,
       if(!p.consignatario)throw new Error("El consignatario es obligatorio.");
       if(!p.client_email)throw new Error("El correo del cliente es obligatorio.");
       if(t==="excepcion"&&!p.incidencias)throw new Error("Para una excepción debes indicar la incidencia.");
-      const files=[...selectedPhotos];
+      const detailPhotoBlocks=t==="mercancia"?[...document.querySelectorAll(".merchandise-detail")]:[];
+      const files=t==="mercancia"?detailPhotoBlocks.flatMap(block=>block._selectedPhotos||[]):[...selectedPhotos];
       if(!files.length)throw new Error("Agrega al menos una fotografía de la mercancía.");
+      if(t==="mercancia"){
+        const noBl=detailPhotoBlocks.find(block=>(block._selectedPhotos||[]).length && !block.querySelector(".detail-bl")?.value.trim());
+        if(noBl)throw new Error("Completa el B/L del consignatario antes de adjuntar sus fotografías.");
+      }
 
       const {data,error}=await sup.from("reports").insert(p).select().single();
       if(error)throw error;
@@ -514,9 +569,11 @@ if(t==="mercancia" && merchandiseDetails.length){
     sort_order:detail.sort_order
   }));
 
-  const {error:detailsError}=await sup
+  const {data:insertedDetails,error:detailsError}=await sup
     .from("report_merchandise_details")
-    .insert(detailRows);
+    .insert(detailRows)
+    .select("id,sort_order,consignatario,bl");
+  savedDetailRows=insertedDetails||[];
 
   if(detailsError){
     throw new Error(
@@ -528,7 +585,16 @@ if(t==="mercancia" && merchandiseDetails.length){
       const e1=await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"REPORTE_CREADO",p_message:`Reporte ${data.report_number} creado`});
       if(e1.error)console.warn("Reporte creado, pero no se pudo registrar REPORTE_CREADO:",e1.error);
 
-      for(let i=0;i<files.length;i++)await uploadPhoto(reportId,files[i],i);
+      if(t==="mercancia"){
+        for(let d=0;d<merchandiseDetails.length;d++){
+          const block=merchandiseDetails[d].sourceBlock;
+          const detailId=savedDetailRows[d]?.id;
+          const blockFiles=block?._selectedPhotos||[];
+          for(let i=0;i<blockFiles.length;i++) await uploadPhoto(reportId,blockFiles[i],i,detailId||null);
+        }
+      }else{
+        for(let i=0;i<files.length;i++)await uploadPhoto(reportId,files[i],i);
+      }
       await uploadSignature(reportId,"transportista",$("transportistaNombreFirma").value,$("sigTransportista"));
       await uploadSignature(reportId,"bodega",$("bodegaNombreFirma").value,$("sigBodega"));
       const e2=await sup.rpc("add_report_event",{p_report_id:reportId,p_event_type:"SOPORTES_CARGADOS",p_message:`Fotos y firmas cargadas para ${data.report_number}`});
@@ -591,7 +657,7 @@ async function blobToPngDataUrl(blob){
   async function fetchReportAssets(reportId){
     const {data:report,error:reportError}=await sup.from("reports").select("*").eq("id",reportId).single();
     if(reportError)throw reportError;
-    const {data:photos,error:photosError}=await sup.from("report_photos").select("storage_path,original_name,sort_order").eq("report_id",reportId).order("sort_order");
+    const {data:photos,error:photosError}=await sup.from("report_photos").select("storage_path,original_name,sort_order,merchandise_detail_id").eq("report_id",reportId).order("sort_order");
     const {data:merchandiseDetails,error:detailsError}=await sup
   .from("report_merchandise_details")
   .select("*")
@@ -615,6 +681,7 @@ const photoResults = await Promise.all(
 
     return {
       meta: ph,
+      merchandiseDetailId: ph.merchandise_detail_id||null,
       dataUrl: pngDataUrl
     };
   })
@@ -1078,96 +1145,40 @@ y += 8;
     }
 
     if(photoData.length){
-  doc.addPage();
-  y=18;
-
-  doc.setFontSize(15);
-  doc.setFont(undefined,"bold");
-  doc.setTextColor(11,45,77);
-  doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y);
-  doc.setDrawColor(11,45,77);
-  doc.setLineWidth(.5);
-  doc.line(margin,y+3,W-margin,y+3);
-
-  y+=10;
-  doc.setTextColor(23,33,43);
-
-  const gap=8;
-const colW=(content-gap)/2;
-const maxH=65;
-
-for(let i=0;i<photoData.length;i+=4){
-
-  const pageH=doc.internal.pageSize.getHeight();
-
-  if(i>0){
-    doc.addPage();
-    y=18;
-    doc.setFontSize(15);
-    doc.setFont(undefined,"bold");
-    doc.setTextColor(11,45,77);
-    doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y);
-    doc.setDrawColor(11,45,77);
-    doc.setLineWidth(.5);
-    doc.line(margin,y+3,W-margin,y+3);
-    y+=10;
-  }
-
-  const pagePhotos=photoData.slice(i,i+4);
-
-  for(let row=0;row<2;row++){
-
-    const rowPhotos=pagePhotos.slice(row*2,row*2+2);
-
-    if(!rowPhotos.length)break;
-
-    const images=[];
-
-    for(const ph of rowPhotos){
-
-      const props=doc.getImageProperties(ph.dataUrl);
-
-      let iw=colW;
-      let ih=iw*props.height/props.width;
-
-      if(ih>maxH){
-        ih=maxH;
-        iw=ih*props.width/props.height;
+      const pageH=doc.internal.pageSize.getHeight();
+      const drawPhotoPageTitle=()=>{
+        y=18;doc.setFontSize(15);doc.setFont(undefined,"bold");doc.setTextColor(11,45,77);
+        doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y);doc.setDrawColor(11,45,77);doc.setLineWidth(.5);doc.line(margin,y+3,W-margin,y+3);
+        y+=10;doc.setTextColor(23,33,43);doc.setFontSize(9);
+      };
+      const ensureRoom=(height)=>{if(y+height>pageH-margin){doc.addPage();drawPhotoPageTitle();}};
+      const addPhotoGroup=(label,photos)=>{
+        if(!photos.length)return;
+        ensureRoom(16);doc.setFillColor(234,241,248);doc.setDrawColor(183,194,204);doc.rect(margin,y,content,10,"FD");
+        doc.setFont(undefined,"bold");doc.setFontSize(9);doc.setTextColor(18,54,90);
+        const maxLabelWidth=content-6;const lines=doc.splitTextToSize(label,maxLabelWidth);
+        doc.text(lines,margin+3,y+4.2);y+=Math.max(10,lines.length*4.2+3);
+        const gap=8,colW=(content-gap)/2,maxH=65;
+        for(let i=0;i<photos.length;i+=2){
+          const row=photos.slice(i,i+2);const images=row.map(ph=>{const props=doc.getImageProperties(ph.dataUrl);let iw=colW,ih=iw*props.height/props.width;if(ih>maxH){ih=maxH;iw=ih*props.width/props.height;}return {dataUrl:ph.dataUrl,iw,ih};});
+          const rowH=Math.max(...images.map(im=>im.ih));ensureRoom(rowH+8);
+          images.forEach((im,j)=>{const x=margin+j*(colW+gap);doc.addImage(im.dataUrl,"JPEG",x+(colW-im.iw)/2,y,im.iw,im.ih);});
+          y+=rowH+7;
+        }
+        y+=3;
+      };
+      doc.addPage();drawPhotoPageTitle();
+      if(report.report_type==="mercancia" && merchandiseDetails?.length){
+        for(const detail of merchandiseDetails){
+          const related=photoData.filter(ph=>ph.merchandiseDetailId===detail.id);
+          addPhotoGroup(`B/L: ${detail.bl||"SIN B/L"} · ${detail.consignatario||"CONSIGNATARIO SIN NOMBRE"}`,related);
+        }
+        const unassigned=photoData.filter(ph=>!ph.merchandiseDetailId || !merchandiseDetails.some(d=>d.id===ph.merchandiseDetailId));
+        if(unassigned.length)addPhotoGroup("FOTOGRAFÍAS SIN CONSIGNATARIO ASOCIADO (REGISTROS ANTERIORES)",unassigned);
+      }else{
+        addPhotoGroup(`REPORTE ${report.report_number||""} · FOTOGRAFÍAS`,photoData);
       }
-
-      images.push({
-  dataUrl:ph.dataUrl,
-  iw,
-  ih
-});
     }
-
-    const rowH=Math.max(...images.map(img=>img.ih));
-
-    if(y+rowH>pageH-margin){
-      doc.addPage();
-      y=18;
-    }
-
-    images.forEach((img,index)=>{
-
-      const x=margin+index*(colW+gap);
-
-      doc.addImage(
-        img.dataUrl,
-        "JPEG",
-        x+(colW-img.iw)/2,
-        y,
-        img.iw,
-        img.ih
-      );
-
-    });
-
-    y+=rowH+12;
-}
-}
-}
 console.time("PDF - Generación");
     const pdfBlob=doc.output("blob");
     console.timeEnd("PDF - Generación");

@@ -141,18 +141,16 @@
       </label>
     </div>
 
-    <section class="subcard">
+    <section id="generalPhotosSection" class="subcard">
       <h3>Fotografías de la mercancía</h3>
-      <p class="hint">En teléfono o tablet puedes usar la cámara. Puedes seleccionar varias fotos.</p>
+      <p class="hint">Para reportes de excepción, adjunta aquí las fotografías generales. En reportes de mercancía, las fotos se agregan dentro de cada consignatario.</p>
       <div class="photo-actions">
-  <button type="button" id="takePhotoBtn">📷 Tomar fotografía</button>
-  <button type="button" id="galleryPhotoBtn">🖼️ Agregar desde galería</button>
-</div>
-
-<input id="cameraInput" type="file" accept="image/*" capture="environment" hidden>
-<input id="photos" type="file" accept="image/*" multiple hidden>
-
-<div id="photoPreview" class="photo-preview"></div>
+        <button type="button" id="takePhotoBtn">📷 Tomar fotografía</button>
+        <button type="button" id="galleryPhotoBtn">🖼️ Agregar desde galería</button>
+      </div>
+      <input id="cameraInput" type="file" accept="image/*" capture="environment" hidden>
+      <input id="photos" type="file" accept="image/*" multiple hidden>
+      <div id="photoPreview" class="photo-preview"></div>
     </section>
 
     <section class="subcard signatures">
