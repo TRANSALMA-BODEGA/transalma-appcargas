@@ -278,6 +278,17 @@ $("addMerchandiseDetail").addEventListener("click",()=>{
         <textarea class="detail-observacion"></textarea>
       </label>
 
+      <section class="detail-photos wide">
+        <h4>Fotografías de este consignatario</h4>
+        <p class="hint">Las fotos de este bloque se identificarán con su B/L en el PDF.</p>
+        <div class="photo-actions">
+          <button type="button" class="detail-take-photo">📷 Tomar fotografía</button>
+          <button type="button" class="detail-gallery-photo">🖼️ Añadir desde galería</button>
+        </div>
+        <input type="file" class="detail-camera-input" accept="image/*" capture="environment" hidden>
+        <input type="file" class="detail-gallery-input" accept="image/*" multiple hidden>
+        <div class="photo-preview detail-photo-preview"></div>
+      </section>
     </div>
   `;
 
@@ -429,6 +440,10 @@ if(!currentCanOperate){
 const r=$("reclamo24").value;
 
 let merchandiseDetails=[];
+// Definir los bloques antes de validar sus fotos evita el error de inicialización.
+const detailPhotoBlocks=t==="mercancia"
+  ?[...document.querySelectorAll(".merchandise-detail")]
+  :[];
 
 if(t==="mercancia"){
   merchandiseDetails=[
@@ -545,7 +560,6 @@ client_emails:clientEmails,
       if(!p.consignatario)throw new Error("El consignatario es obligatorio.");
       if(!p.client_email)throw new Error("El correo del cliente es obligatorio.");
       if(t==="excepcion"&&!p.incidencias)throw new Error("Para una excepción debes indicar la incidencia.");
-      const detailPhotoBlocks=t==="mercancia"?[...document.querySelectorAll(".merchandise-detail")]:[];
       const files=t==="mercancia"?detailPhotoBlocks.flatMap(block=>block._selectedPhotos||[]):[...selectedPhotos];
       if(!files.length)throw new Error("Agrega al menos una fotografía de la mercancía.");
       if(t==="mercancia"){
@@ -609,6 +623,7 @@ sessionStorage.setItem("lastSavedReportNumber",data.report_number);
 $("pdfActions").hidden=false;
       msg("formMessage",`Reporte ${data.report_number} guardado con ${files.length} foto(s) y 2 firmas.`);
       $("reportForm").reset();setDate();clearSignature("sigTransportista");clearSignature("sigBodega");selectedPhotos=[];$("photoPreview").innerHTML="";
+      document.querySelectorAll(".merchandise-detail").forEach(block=>{block._selectedPhotos=[];renderDetailPhotoPreview(block);});
     }catch(error){console.error(error);msg("formMessage",error.message||"No se pudo guardar el reporte.")}
     finally{saveButton.disabled=false}
   };
