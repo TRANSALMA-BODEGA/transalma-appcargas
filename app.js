@@ -1232,6 +1232,7 @@ y += 8;
         });
         y+=4;
       };
+      const photoSectionStartPage=doc.internal.getNumberOfPages();
       addPhotoPage();
       if(report.report_type==="mercancia" && merchandiseDetails?.length){
         for(const detail of merchandiseDetails){
@@ -1242,6 +1243,12 @@ y += 8;
         if(unassigned.length)addPhotoGroup("FOTOGRAFÍAS SIN CONSIGNATARIO ASOCIADO (REGISTROS ANTERIORES)",unassigned);
       }else{
         addPhotoGroup(`REPORTE ${report.report_number||""} · FOTOGRAFÍAS`,photoData);
+      }
+      // Protección final: si la paginación dejó una última página con solo
+      // el título de fotografías, eliminar únicamente esa página vacía.
+      const lastPage=doc.internal.getNumberOfPages();
+      if(lastPage>photoSectionStartPage && y<=photoTop+11){
+        doc.deletePage(lastPage);
       }
     }
 console.time("PDF - Generación");
