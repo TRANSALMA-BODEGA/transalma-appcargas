@@ -1161,28 +1161,78 @@ y += 8;
 
     if(photoData.length){
       const pageH=doc.internal.pageSize.getHeight();
+      const photoTop=18;
       const drawPhotoPageTitle=()=>{
-        y=18;doc.setFontSize(15);doc.setFont(undefined,"bold");doc.setTextColor(11,45,77);
-        doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y);doc.setDrawColor(11,45,77);doc.setLineWidth(.5);doc.line(margin,y+3,W-margin,y+3);
-        y+=10;doc.setTextColor(23,33,43);doc.setFontSize(9);
+        y=photoTop;
+        doc.setFont(undefined,"bold");
+        doc.setFontSize(15);
+        doc.setTextColor(11,45,77);
+        doc.text("FOTOGRAFÍAS DE LA MERCANCÍA",margin,y);
+        doc.setDrawColor(11,45,77);
+        doc.setLineWidth(.5);
+        doc.line(margin,y+3,W-margin,y+3);
+        y+=10;
+        doc.setTextColor(23,33,43);
+        doc.setFontSize(9);
       };
-      const ensureRoom=(height)=>{if(y+height>pageH-margin){doc.addPage();drawPhotoPageTitle();}};
+      const addPhotoPage=()=>{
+        doc.addPage();
+        drawPhotoPageTitle();
+      };
+      const availableHeight=()=>pageH-margin-y;
+      const ensureRoom=(height)=>{
+        if(y+height>pageH-margin){
+          addPhotoPage();
+        }
+      };
+      const imageLayout=(ph,colW,maxH)=>{
+        const props=doc.getImageProperties(ph.dataUrl);
+        let iw=colW,ih=iw*props.height/props.width;
+        if(ih>maxH){ih=maxH;iw=ih*props.width/props.height;}
+        return {dataUrl:ph.dataUrl,iw,ih};
+      };
       const addPhotoGroup=(label,photos)=>{
         if(!photos.length)return;
-        ensureRoom(16);doc.setFillColor(234,241,248);doc.setDrawColor(183,194,204);doc.rect(margin,y,content,10,"FD");
-        doc.setFont(undefined,"bold");doc.setFontSize(9);doc.setTextColor(18,54,90);
-        const maxLabelWidth=content-6;const lines=doc.splitTextToSize(label,maxLabelWidth);
-        doc.text(lines,margin+3,y+4.2);y+=Math.max(10,lines.length*4.2+3);
-        const gap=8,colW=(content-gap)/2,maxH=65;
+        const gap=8;
+        const colW=(content-gap)/2;
+        const maxH=65;
+        const rows=[];
         for(let i=0;i<photos.length;i+=2){
-          const row=photos.slice(i,i+2);const images=row.map(ph=>{const props=doc.getImageProperties(ph.dataUrl);let iw=colW,ih=iw*props.height/props.width;if(ih>maxH){ih=maxH;iw=ih*props.width/props.height;}return {dataUrl:ph.dataUrl,iw,ih};});
-          const rowH=Math.max(...images.map(im=>im.ih));ensureRoom(rowH+8);
-          images.forEach((im,j)=>{const x=margin+j*(colW+gap);doc.addImage(im.dataUrl,"JPEG",x+(colW-im.iw)/2,y,im.iw,im.ih);});
-          y+=rowH+7;
+          const images=photos.slice(i,i+2).map(ph=>imageLayout(ph,colW,maxH));
+          rows.push({images,height:Math.max(...images.map(im=>im.ih))+7});
         }
-        y+=3;
+        doc.setFont(undefined,"bold");
+        doc.setFontSize(9);
+        const lines=doc.splitTextToSize(label,content-6);
+        const headerH=Math.max(10,lines.length*4.2+3);
+        // Keep each group's heading with its first photo row. This avoids orphaned
+        // headings and prevents a trailing title-only page.
+        const firstRowH=rows[0]?.height||0;
+        if(y+headerH+firstRowH+3>pageH-margin && y>photoTop+11){
+          addPhotoPage();
+        }
+        // If a group is larger than the remaining page, move it before drawing its label.
+        ensureRoom(headerH+firstRowH+3);
+        doc.setFillColor(234,241,248);
+        doc.setDrawColor(183,194,204);
+        doc.rect(margin,y,content,headerH,"FD");
+        doc.setFont(undefined,"bold");
+        doc.setFontSize(9);
+        doc.setTextColor(18,54,90);
+        doc.text(lines,margin+3,y+4.2);
+        y+=headerH+3;
+        rows.forEach((row,index)=>{
+          // The first row stays with the header; later rows may continue on a new page.
+          if(index>0)ensureRoom(row.height);
+          row.images.forEach((im,j)=>{
+            const x=margin+j*(colW+gap);
+            doc.addImage(im.dataUrl,"JPEG",x+(colW-im.iw)/2,y,im.iw,im.ih);
+          });
+          y+=row.height;
+        });
+        y+=4;
       };
-      doc.addPage();drawPhotoPageTitle();
+      addPhotoPage();
       if(report.report_type==="mercancia" && merchandiseDetails?.length){
         for(const detail of merchandiseDetails){
           const related=photoData.filter(ph=>ph.merchandiseDetailId===detail.id);
