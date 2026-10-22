@@ -1248,13 +1248,20 @@ y += 8;
       }else{
         addPhotoGroup(`REPORTE ${report.report_number||""} · FOTOGRAFÍAS`,photoData);
       }
-      // Remove every photo-section page that has no image at all, not just
-      // the last page and not based on the vertical cursor (y). Delete from
-      // the end backwards so page indices remain stable.
-      for(let page=doc.internal.getNumberOfPages();page>photoSectionStartPage;page--){
-        if(!photoPagesWithImages.has(page)){
-          doc.deletePage(page);
-        }
+      // The photo section is the final section of this PDF. Keep every page
+      // through the last page that actually received a photograph, and remove
+      // any trailing pages created after it that contain only the section title.
+      // Work backwards so deleting a page cannot change the indices still to check.
+      const lastPhotoPage = photoPagesWithImages.size
+        ? Math.max(...photoPagesWithImages)
+        : photoSectionStartPage;
+      while(doc.internal.getNumberOfPages() > lastPhotoPage){
+        doc.deletePage(doc.internal.getNumberOfPages());
+      }
+      // Also remove any empty photo-section page before the last photo page.
+      // Iterate backwards so the original page numbers remain stable during checks.
+      for(let page=lastPhotoPage-1;page>photoSectionStartPage;page--){
+        if(!photoPagesWithImages.has(page)) doc.deletePage(page);
       }
     }
 console.time("PDF - Generación");
