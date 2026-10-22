@@ -1222,8 +1222,23 @@ y += 8;
         doc.text(lines,margin+3,y+4.2);
         y+=headerH+3;
         rows.forEach((row,index)=>{
-          // The first row stays with the header; later rows may continue on a new page.
-          if(index>0)ensureRoom(row.height);
+          // If a later row must continue on another page, repeat the same
+          // consignee/B-L heading before its photos so their association is clear.
+          if(index>0){
+            const pageBeforeRow=doc.internal.getCurrentPageInfo().pageNumber;
+            ensureRoom(row.height+headerH+3);
+            const pageAfterRoomCheck=doc.internal.getCurrentPageInfo().pageNumber;
+            if(pageAfterRoomCheck!==pageBeforeRow){
+              doc.setFillColor(234,241,248);
+              doc.setDrawColor(183,194,204);
+              doc.rect(margin,y,content,headerH,"FD");
+              doc.setFont(undefined,"bold");
+              doc.setFontSize(9);
+              doc.setTextColor(18,54,90);
+              doc.text(lines,margin+3,y+4.2);
+              y+=headerH+3;
+            }
+          }
           row.images.forEach((im,j)=>{
             const x=margin+j*(colW+gap);
             doc.addImage(im.dataUrl,"JPEG",x+(colW-im.iw)/2,y,im.iw,im.ih);
