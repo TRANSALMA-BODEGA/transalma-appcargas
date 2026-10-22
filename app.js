@@ -1227,12 +1227,16 @@ y += 8;
           row.images.forEach((im,j)=>{
             const x=margin+j*(colW+gap);
             doc.addImage(im.dataUrl,"JPEG",x+(colW-im.iw)/2,y,im.iw,im.ih);
+            photoPagesWithImages.add(doc.internal.getCurrentPageInfo().pageNumber);
           });
           y+=row.height;
         });
         y+=4;
       };
       const photoSectionStartPage=doc.internal.getNumberOfPages();
+      // Track pages that actually receive at least one photograph. A page may
+      // have the section title but no images if pagination creates it at the end.
+      const photoPagesWithImages=new Set();
       addPhotoPage();
       if(report.report_type==="mercancia" && merchandiseDetails?.length){
         for(const detail of merchandiseDetails){
@@ -1244,11 +1248,13 @@ y += 8;
       }else{
         addPhotoGroup(`REPORTE ${report.report_number||""} · FOTOGRAFÍAS`,photoData);
       }
-      // Protección final: si la paginación dejó una última página con solo
-      // el título de fotografías, eliminar únicamente esa página vacía.
-      const lastPage=doc.internal.getNumberOfPages();
-      if(lastPage>photoSectionStartPage && y<=photoTop+11){
-        doc.deletePage(lastPage);
+      // Remove every photo-section page that has no image at all, not just
+      // the last page and not based on the vertical cursor (y). Delete from
+      // the end backwards so page indices remain stable.
+      for(let page=doc.internal.getNumberOfPages();page>photoSectionStartPage;page--){
+        if(!photoPagesWithImages.has(page)){
+          doc.deletePage(page);
+        }
       }
     }
 console.time("PDF - Generación");
