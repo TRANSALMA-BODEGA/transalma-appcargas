@@ -1252,6 +1252,16 @@ y += 8;
       // through the last page that actually received a photograph, and remove
       // any trailing pages created after it that contain only the section title.
       // Work backwards so deleting a page cannot change the indices still to check.
+      const __photoPagesBeforeCleanup = doc.internal.getNumberOfPages();
+      const __photoPagesWithImages = [...photoPagesWithImages].sort((a,b)=>a-b);
+      console.info("[TRANSALMA PDF DIAGNÓSTICO] Antes de limpiar páginas fotográficas", {
+        reportNumber: report.report_number,
+        photoSectionStartPage,
+        totalPagesBeforeCleanup: __photoPagesBeforeCleanup,
+        pagesWithPhotos: __photoPagesWithImages,
+        photoPageCount: __photoPagesWithImages.length
+      });
+
       const lastPhotoPage = photoPagesWithImages.size
         ? Math.max(...photoPagesWithImages)
         : photoSectionStartPage;
@@ -1263,6 +1273,12 @@ y += 8;
       for(let page=lastPhotoPage-1;page>photoSectionStartPage;page--){
         if(!photoPagesWithImages.has(page)) doc.deletePage(page);
       }
+      console.info("[TRANSALMA PDF DIAGNÓSTICO] Después de limpiar páginas fotográficas", {
+        reportNumber: report.report_number,
+        totalPagesAfterCleanup: doc.internal.getNumberOfPages(),
+        pagesWithPhotos: __photoPagesWithImages,
+        lastPhotoPage
+      });
     }
 console.time("PDF - Generación");
     const pdfBlob=doc.output("blob");
