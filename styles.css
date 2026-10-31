@@ -40,6 +40,45 @@ th{background:#f5f8fa;white-space:nowrap}
 .admin-actions small{font-weight:500;opacity:.7}
 .actions-cell{display:flex;flex-wrap:wrap;gap:6px;min-width:300px}
 .actions-cell button{padding:7px 9px;font-size:12px}
+/* TRANSALMA - Fondo corporativo de inicio de sesión */
+body:has(#loginView:not([hidden])) {
+  background:
+    linear-gradient(
+      110deg,
+      rgba(5, 25, 45, 0.78),
+      rgba(5, 25, 45, 0.35)
+    ),
+    url("login-background.jpg.png") center center / cover no-repeat fixed;
+  min-height: 100vh;
+}
+
+body:has(#loginView:not([hidden])) .shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body:has(#loginView:not([hidden])) .auth {
+  width: 100%;
+  max-width: 440px;
+  margin: 24px auto;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.30);
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 600px) {
+  body:has(#loginView:not([hidden])) {
+    background-attachment: scroll;
+    background-position: center;
+  }
+
+  body:has(#loginView:not([hidden])) .shell {
+    padding: 16px;
+  }
+}
 #loginMessage,#formMessage,#editMessage{min-height:20px}
 @media(max-width:900px){.cards{grid-template-columns:1fr 1fr}.signature-grid{grid-template-columns:1fr}}
 @media(max-width:800px){.cards,.grid{grid-template-columns:1fr}.wide{grid-column:auto}.shell{padding:12px}header{gap:12px;align-items:flex-start}.card{padding:18px}.photo-preview{grid-template-columns:repeat(2,1fr)}.actions-cell{min-width:250px}}
