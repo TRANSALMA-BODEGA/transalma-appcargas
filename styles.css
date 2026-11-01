@@ -320,3 +320,183 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+/* =====================================================
+   TRANSALMA - DISEÑO CORPORATIVO INTERNO
+   Azul profundo + dorado + blanco
+   Mantiene las funciones y botones originales
+   ===================================================== */
+
+/* Fondo general del sistema, sin alterar el login */
+body:not(:has(#loginView:not([hidden]))) {
+  background:
+    radial-gradient(ellipse at 5% 5%, rgba(0,105,190,.65), transparent 38%),
+    radial-gradient(ellipse at 95% 95%, rgba(0,75,145,.65), transparent 42%),
+    linear-gradient(135deg,#03152f,#063c75 50%,#03152f) !important;
+  background-attachment: fixed;
+  color: #102b49;
+}
+
+/* Decoración de curvas corporativas */
+body:not(:has(#loginView:not([hidden]))) .shell {
+  position: relative;
+  isolation: isolate;
+  max-width: 1480px;
+  padding: 24px;
+}
+
+body:not(:has(#loginView:not([hidden]))) .shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at -8% 12%,
+      transparent 0 27%,
+      rgba(255,255,255,.85) 27.2% 27.6%,
+      #d9a52c 27.8% 28.5%,
+      transparent 28.8%),
+    radial-gradient(ellipse at 108% 88%,
+      transparent 0 28%,
+      rgba(255,255,255,.9) 28.2% 28.6%,
+      #e0ad32 28.8% 29.5%,
+      transparent 29.8%);
+  opacity: .9;
+}
+
+/* Barra superior */
+body:not(:has(#loginView:not([hidden]))) header {
+  background: linear-gradient(110deg,#031a38,#073f78) !important;
+  color: #fff !important;
+  border: 1px solid #83b9e8;
+  border-radius: 20px !important;
+  box-shadow: 0 8px 25px rgba(0,0,0,.3);
+  padding: 18px 24px;
+}
+
+body:not(:has(#loginView:not([hidden]))) header small {
+  color: #dcecff !important;
+}
+
+/* Panel principal: Reportes de descarga */
+body:not(:has(#loginView:not([hidden]))) .hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 190px;
+  padding: 34px !important;
+  color: white !important;
+  background:
+    linear-gradient(90deg,
+      #031b3b 0%,
+      rgba(3,34,72,.96) 35%,
+      rgba(3,43,83,.65) 65%,
+      rgba(3,43,83,.08) 100%),
+    url("login-background.jpg.png") right center / cover no-repeat,
+    #052e60 !important;
+  border: 1px solid #b9d8f2;
+  border-radius: 22px !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+body:not(:has(#loginView:not([hidden]))) .hero h1,
+body:not(:has(#loginView:not([hidden]))) .hero p {
+  color: #fff !important;
+}
+
+/* Accesos: mercancía, excepción e historial */
+body:not(:has(#loginView:not([hidden]))) .cards {
+  gap: 16px;
+}
+
+body:not(:has(#loginView:not([hidden]))) .action {
+  min-height: 82px;
+  padding: 18px 20px !important;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  color: #102b49 !important;
+  background: #fff !important;
+  border: 1px solid #d4e3f0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 7px 18px rgba(0,0,0,.2);
+}
+
+body:not(:has(#loginView:not([hidden]))) .action span,
+body:not(:has(#loginView:not([hidden]))) .action b {
+  color: #0b2d4d !important;
+}
+
+body:not(:has(#loginView:not([hidden]))) .action small {
+  color: #526b84 !important;
+}
+
+/* Paneles blancos */
+body:not(:has(#loginView:not([hidden]))) .card {
+  color: #172b40;
+  background: rgba(255,255,255,.98) !important;
+  border: 1px solid #d5e3ef !important;
+  border-radius: 20px !important;
+  box-shadow: 0 9px 25px rgba(0,0,0,.22);
+}
+
+body:not(:has(#loginView:not([hidden]))) .admin-card {
+  border: 2px solid #0b2d4d !important;
+}
+
+body:not(:has(#loginView:not([hidden]))) .admin-badge {
+  background: #0b2d4d !important;
+  color: #fff !important;
+}
+
+body:not(:has(#loginView:not([hidden]))) .subcard {
+  background: #f3f7fb !important;
+  border-color: #d6e3ee !important;
+}
+
+/* Botones funcionales: conservan sus eventos originales */
+body:not(:has(#loginView:not([hidden]))) button:not(.secondary):not(.danger) {
+  background: linear-gradient(135deg,#0b2d4d,#07518a) !important;
+  color: #fff !important;
+}
+
+body:not(:has(#loginView:not([hidden]))) button.secondary {
+  background: #e8eff6 !important;
+  color: #173a5c !important;
+}
+
+body:not(:has(#loginView:not([hidden]))) button.danger {
+  background: #9b1c1c !important;
+  color: #fff !important;
+}
+
+/* Tablas y formularios */
+body:not(:has(#loginView:not([hidden]))) th {
+  background: #eaf1f7 !important;
+  color: #0b2d4d !important;
+}
+
+body:not(:has(#loginView:not([hidden]))) input,
+body:not(:has(#loginView:not([hidden]))) textarea,
+body:not(:has(#loginView:not([hidden]))) select {
+  background: #fff;
+  color: #17212b;
+}
+
+/* Adaptación móvil */
+@media(max-width:800px) {
+  body:not(:has(#loginView:not([hidden]))) .shell {
+    padding: 12px;
+  }
+
+  body:not(:has(#loginView:not([hidden]))) .hero {
+    min-height: 165px;
+    padding: 24px !important;
+    background-position: 65% center;
+  }
+
+  body:not(:has(#loginView:not([hidden]))) .cards {
+    grid-template-columns: 1fr;
+  }
+}
