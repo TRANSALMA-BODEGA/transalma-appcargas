@@ -693,121 +693,209 @@ body:has(#loginView:not([hidden])) .auth {
   color: #fff !important;
 }
 
-/* 2. FONDO CORPORATIVO DEL SISTEMA INTERNO */
+/* =========================================================
+   TRANSALMA - INTERIOR CORPORATIVO APROBADO
+   Fondo marítimo, cabecera/hero transparentes sin cristal,
+   accesos blancos y paneles administrativos blancos.
+   Este bloque va AL FINAL de styles.css.
+   El inicio de sesión queda intacto.
+   ========================================================= */
+
 body:not(:has(#loginView:not([hidden]))) {
-  background:
-    radial-gradient(ellipse at 15% 15%, #0755a0 0%, transparent 38%),
-    radial-gradient(ellipse at 85% 80%, #064b91 0%, transparent 40%),
-    linear-gradient(135deg,#03152f,#052e60 55%,#03152f) !important;
+  min-height: 100vh;
   color: #102b49 !important;
+  background:
+    linear-gradient(120deg, rgba(3,24,49,.72), rgba(4,55,105,.32)),
+    url("./login-background.jpg.png") center center / cover no-repeat fixed !important;
 }
 
-/* 3. ACCESOS: BLANCOS Y CON TEXTO LEGIBLE */
-body:not(:has(#loginView:not([hidden]))) .cards .action,
-body:not(:has(#loginView:not([hidden]))) button.action {
-  background: #ffffff !important;
+body:not(:has(#loginView:not([hidden]))) .shell {
+  width: 100%;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 24px 26px 32px;
+}
+
+/* Barra superior: transparente, sin cristal, blur ni sombra */
+body:not(:has(#loginView:not([hidden]))) header {
+  position: relative;
+  overflow: hidden;
+  background: transparent !important;
   background-image: none !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.82) !important;
+  border-radius: 20px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body:not(:has(#loginView:not([hidden]))) header,
+body:not(:has(#loginView:not([hidden]))) header * {
+  color: #fff !important;
+  text-shadow: 0 1px 3px rgba(0,20,45,.55);
+}
+
+body:not(:has(#loginView:not([hidden]))) header small {
+  color: #e5f1ff !important;
+}
+
+/* Mapa mundi punteado decorativo */
+body:not(:has(#loginView:not([hidden]))) header::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 18%;
+  width: 300px;
+  height: 76px;
+  pointer-events: none;
+  opacity: .72;
+  background-image: radial-gradient(circle, #48baff 1.15px, transparent 1.65px);
+  background-size: 6px 6px;
+  clip-path: polygon(
+    3% 26%, 12% 12%, 23% 17%, 28% 5%, 40% 14%, 46% 27%,
+    58% 12%, 69% 17%, 79% 7%, 96% 19%, 91% 38%, 82% 44%,
+    87% 58%, 76% 66%, 70% 91%, 60% 77%, 56% 53%, 47% 48%,
+    42% 69%, 32% 78%, 26% 60%, 17% 54%, 11% 40%
+  );
+}
+
+/* Hero Reportes de descarga: transparente, sin desenfoque */
+body:not(:has(#loginView:not([hidden]))) .hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 190px;
+  margin: 20px 0;
+  padding: 34px;
+  color: #fff !important;
+  background: transparent !important;
+  background-image: none !important;
+  border: 1px solid rgba(255,255,255,.82) !important;
+  border-radius: 22px !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body:not(:has(#loginView:not([hidden]))) .hero p,
+body:not(:has(#loginView:not([hidden]))) .hero h1,
+body:not(:has(#loginView:not([hidden]))) .hero span {
+  color: #fff !important;
+  text-shadow: 0 1px 4px rgba(0,18,40,.7);
+}
+
+/* Accesos principales: blanco sólido y letras azul oscuro legibles */
+body:not(:has(#loginView:not([hidden]))) .cards .action,
+body:not(:has(#loginView:not([hidden]))) .cards button.action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 82px;
+  padding: 18px 20px;
   color: #0b2d4d !important;
-  border: 1px solid #d4e3f0 !important;
-  box-shadow: 0 7px 18px rgba(0,0,0,.20) !important;
+  background: #fff !important;
+  background-image: none !important;
+  border: 1px solid #dce7f1 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 6px 18px rgba(0,18,40,.18) !important;
   opacity: 1 !important;
 }
 
 body:not(:has(#loginView:not([hidden]))) .cards .action *,
-body:not(:has(#loginView:not([hidden]))) button.action * {
+body:not(:has(#loginView:not([hidden]))) .cards button.action * {
   color: #0b2d4d !important;
   opacity: 1 !important;
+  text-shadow: none !important;
 }
 
-body:not(:has(#loginView:not([hidden]))) .cards .action small {
+body:not(:has(#loginView:not([hidden]))) .cards .action small,
+body:not(:has(#loginView:not([hidden]))) .cards button.action small {
+  display: block;
   color: #526b84 !important;
+  opacity: 1 !important;
 }
 
-/* 4. PANEL DE ADMINISTRACIÓN */
+/* Administración y demás paneles: blanco limpio */
+body:not(:has(#loginView:not([hidden]))) .card,
 body:not(:has(#loginView:not([hidden]))) .admin-card,
-body:not(:has(#loginView:not([hidden]))) .card {
-  background: #ffffff !important;
+body:not(:has(#loginView:not([hidden]))) .subcard {
   color: #102b49 !important;
+  background: #fff !important;
+  background-image: none !important;
+  border-color: #dce7f1 !important;
+  box-shadow: 0 7px 22px rgba(0,18,40,.16) !important;
   opacity: 1 !important;
 }
 
-body:not(:has(#loginView:not([hidden]))) .admin-card h2,
-body:not(:has(#loginView:not([hidden]))) .admin-card h3,
-body:not(:has(#loginView:not([hidden]))) .admin-card p {
+body:not(:has(#loginView:not([hidden]))) .card h1,
+body:not(:has(#loginView:not([hidden]))) .card h2,
+body:not(:has(#loginView:not([hidden]))) .card h3,
+body:not(:has(#loginView:not([hidden]))) .card p,
+body:not(:has(#loginView:not([hidden]))) .card label,
+body:not(:has(#loginView:not([hidden]))) .card td,
+body:not(:has(#loginView:not([hidden]))) .card th {
   color: #102b49 !important;
   opacity: 1 !important;
+  text-shadow: none !important;
 }
 
-/* 5. BOTONES FUNCIONALES Y VISIBLES */
-body:not(:has(#loginView:not([hidden]))) button:not(.secondary):not(.danger) {
-  background: linear-gradient(135deg,#0b2d4d,#07518a) !important;
-  color: #ffffff !important;
+body:not(:has(#loginView:not([hidden]))) .admin-badge {
+  color: #fff !important;
+  background: #0b2d4d !important;
+}
+
+/* Botones administrativos: primario azul y secundario gris claro */
+body:not(:has(#loginView:not([hidden]))) .admin-actions button:not(.secondary):not(.danger),
+body:not(:has(#loginView:not([hidden]))) button:not(.secondary):not(.danger):not(.action) {
+  color: #fff !important;
+  background: #0b2d4d !important;
+  background-image: none !important;
+  border: 1px solid #0b2d4d !important;
   opacity: 1 !important;
+  text-shadow: none !important;
 }
 
 body:not(:has(#loginView:not([hidden]))) button.secondary {
-  background: #e8eff6 !important;
   color: #173a5c !important;
+  background: #e8eff6 !important;
+  border: 1px solid #d9e4ee !important;
 }
 
 body:not(:has(#loginView:not([hidden]))) button.danger {
+  color: #fff !important;
   background: #9b1c1c !important;
-  color: #ffffff !important;
 }
 
-/* 6. TEXTO GENERAL Y TABLAS */
-body:not(:has(#loginView:not([hidden]))) label,
-body:not(:has(#loginView:not([hidden]))) th,
-body:not(:has(#loginView:not([hidden]))) td {
-  color: #17324e;
+/* Campos y tablas */
+body:not(:has(#loginView:not([hidden]))) input,
+body:not(:has(#loginView:not([hidden]))) textarea,
+body:not(:has(#loginView:not([hidden]))) select {
+  color: #172b40;
+  background: #fff;
 }
 
 body:not(:has(#loginView:not([hidden]))) th {
+  color: #0b2d4d !important;
   background: #eaf1f7 !important;
 }
 
-/* 7. MÓVILES */
-@media(max-width:800px) {
-  body:has(#loginView:not([hidden])) {
+/* Adaptación móvil; no toca el diseño del login */
+@media (max-width: 800px) {
+  body:not(:has(#loginView:not([hidden]))) {
     background-attachment: scroll !important;
+  }
+
+  body:not(:has(#loginView:not([hidden]))) .shell {
+    padding: 12px;
   }
 
   body:not(:has(#loginView:not([hidden]))) .cards {
     grid-template-columns: 1fr;
   }
-}
 
-/* CORRECCIÓN DEFINITIVA: ACCESOS TRANSALMA */
-.cards .action,
-.cards button.action,
-button.action {
-  background: #ffffff !important;
-  background-image: none !important;
-  color: #0b2d4d !important;
-  border: 1px solid #d5e3ef !important;
-  opacity: 1 !important;
-  box-shadow: 0 5px 16px rgba(0,0,0,.16) !important;
-}
-
-/* Títulos de los tres accesos */
-.cards .action b,
-.cards .action strong,
-.cards .action span,
-.cards button.action b,
-.cards button.action span {
-  color: #0b2d4d !important;
-  opacity: 1 !important;
-}
-
-/* Descripciones */
-.cards .action small,
-.cards button.action small {
-  color: #526b84 !important;
-  opacity: 1 !important;
-}
-
-/* Mantener botones administrativos azules */
-.admin-actions button:not(.secondary):not(.danger) {
-  background: #0b2d4d !important;
-  color: #ffffff !important;
+  body:not(:has(#loginView:not([hidden]))) header::after {
+    right: 12%;
+    width: 150px;
+    opacity: .42;
+  }
 }
