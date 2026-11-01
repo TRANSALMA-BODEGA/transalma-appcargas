@@ -82,3 +82,90 @@ body:has(#loginView:not([hidden])) .auth {
     padding: 16px;
   }
 }
+
+/* TRANSALMA - Acceso corporativo estilo cristal */
+body:has(#loginView:not([hidden])) {
+  background:
+    linear-gradient(115deg, rgba(4,22,43,.28), rgba(4,22,43,.12)),
+    url("login-background.jpg.png") center / cover no-repeat fixed;
+  min-height: 100vh;
+}
+
+body:has(#loginView:not([hidden])) .shell {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  padding: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body:has(#loginView:not([hidden])) .auth {
+  width: min(100%, 470px);
+  max-width: 470px;
+  padding: 32px;
+  color: white;
+  background: linear-gradient(145deg,
+    rgba(13,55,94,.76), rgba(5,28,55,.62)) !important;
+  border: 1px solid rgba(255,255,255,.72);
+  border-radius: 22px;
+  box-shadow: 0 22px 60px rgba(0,12,30,.38);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+body:has(#loginView:not([hidden])) .brand-login {
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+body:has(#loginView:not([hidden])) .login-logo {
+  width: min(100%, 290px);
+  max-height: 92px;
+  object-fit: contain;
+}
+
+body:has(#loginView:not([hidden])) .auth h2,
+body:has(#loginView:not([hidden])) .auth label,
+body:has(#loginView:not([hidden])) #loginMessage {
+  color: white;
+}
+
+body:has(#loginView:not([hidden])) .auth h2 {
+  text-align: center;
+  font-size: 25px;
+}
+
+body:has(#loginView:not([hidden])) .auth input {
+  color: white;
+  background: rgba(255,255,255,.13);
+  border: 1px solid rgba(255,255,255,.58);
+  border-radius: 10px;
+  padding: 13px;
+}
+
+body:has(#loginView:not([hidden])) .auth input::placeholder {
+  color: rgba(255,255,255,.72);
+}
+
+body:has(#loginView:not([hidden])) .auth button {
+  min-width: 170px;
+  color: #082b4b;
+  background: linear-gradient(180deg,#f8d875,#d9a82e);
+  border: 1px solid rgba(255,239,180,.75);
+  border-radius: 11px;
+}
+
+@media(max-width:600px) {
+  body:has(#loginView:not([hidden])) .shell {
+    padding: 16px;
+  }
+  body:has(#loginView:not([hidden])) .auth {
+    padding: 25px 21px;
+  }
+  body:has(#loginView:not([hidden])) .login-logo {
+    max-width: 250px;
+    max-height: 78px;
+  }
+}
