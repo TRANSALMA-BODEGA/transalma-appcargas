@@ -169,3 +169,162 @@ body:has(#loginView:not([hidden])) .auth button {
     max-height: 78px;
   }
 }
+
+/* TRANSALMA - Interior corporativo azul y dorado */
+body:has(#appView:not([hidden])) {
+  min-height: 100vh;
+  background:
+    linear-gradient(90deg, #041d3b 0%, rgba(4,29,59,.97) 30%, rgba(4,35,75,.78) 62%, rgba(4,35,75,.18) 100%),
+    url("login-background.jpg.png") right center / auto 100% fixed no-repeat,
+    radial-gradient(ellipse at 48% 48%, #0875d1, #064b91 48%, #031a38);
+  background-color: #031a38;
+}
+
+body:has(#appView:not([hidden])) .shell {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 32px, 1380px);
+  max-width: 1380px;
+  margin: auto;
+  padding: 24px 0 40px;
+}
+
+body:has(#appView:not([hidden])) #appView > header {
+  min-height: 78px;
+  padding: 16px 24px;
+  margin-bottom: 20px;
+  color: white;
+  background: linear-gradient(110deg, #031935, #053c70);
+  border: 1px solid #a9d5f7;
+  border-radius: 20px;
+  box-shadow: 0 12px 32px #0005;
+}
+
+body:has(#appView:not([hidden])) #appView > header strong {
+  font-size: 19px;
+}
+
+body:has(#appView:not([hidden])) #appView > header small {
+  color: #d8eaff;
+}
+
+body:has(#appView:not([hidden])) .hero {
+  min-height: 190px;
+  margin: 0 0 20px;
+  padding: 34px;
+  color: white;
+  background: linear-gradient(110deg, #031d3d, #064f91);
+  border: 1px solid #d7edff;
+  border-radius: 22px;
+  box-shadow: 0 14px 35px #0004;
+}
+
+body:has(#appView:not([hidden])) .hero p {
+  color: #d6e8fa;
+  font-weight: 750;
+  letter-spacing: .16em;
+}
+
+body:has(#appView:not([hidden])) .hero h1 {
+  font-size: clamp(27px, 3vw, 38px);
+}
+
+body:has(#appView:not([hidden])) .hero span {
+  color: #edf6ff;
+}
+
+body:has(#appView:not([hidden])) .cards {
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+body:has(#appView:not([hidden])) .action {
+  min-height: 82px;
+  align-items: center;
+  padding: 18px 20px;
+  color: #102b49;
+  background: linear-gradient(145deg, #fff, #eff6fc);
+  border: 1px solid #c4dbee;
+  border-radius: 16px;
+  box-shadow: 0 8px 22px #0003;
+}
+
+body:has(#appView:not([hidden])) .action b {
+  color: #0b2d4d;
+  font-size: 16px;
+}
+
+body:has(#appView:not([hidden])) .action small {
+  color: #536b83;
+}
+
+body:has(#appView:not([hidden])) .card {
+  color: #172b40;
+  background: rgba(255,255,255,.97);
+  border: 1px solid #d2e2f0;
+  border-radius: 19px;
+  box-shadow: 0 12px 30px #0003;
+}
+
+body:has(#appView:not([hidden])) .admin-card {
+  border: 2px solid #0b2d4d;
+}
+
+body:has(#appView:not([hidden])) .admin-badge {
+  background: linear-gradient(135deg, #0b2d4d, #075a9b);
+  color: white;
+  padding: 7px 13px;
+}
+
+body:has(#appView:not([hidden])) #appView button:not(.secondary):not(.danger) {
+  background: linear-gradient(135deg, #0b2d4d, #07518a);
+  color: white;
+  border: 1px solid #174d78;
+}
+
+body:has(#appView:not([hidden])) #appView button.secondary {
+  background: #e8eff6;
+  color: #173a5c;
+  border: 1px solid #d3e0eb;
+}
+
+body:has(#appView:not([hidden])) .subcard {
+  background: #f3f7fb;
+  border-color: #d6e3ee;
+}
+
+body:has(#appView:not([hidden])) input,
+body:has(#appView:not([hidden])) textarea,
+body:has(#appView:not([hidden])) select {
+  border-color: #c8d7e5;
+}
+
+body:has(#appView:not([hidden])) th {
+  background: #eaf1f7;
+  color: #0b2d4d;
+}
+
+@media(max-width:800px) {
+  body:has(#appView:not([hidden])) {
+    background-attachment: scroll;
+    background-position: 68% center;
+  }
+
+  body:has(#appView:not([hidden])) .shell {
+    width: calc(100% - 20px);
+    padding: 12px 0 28px;
+  }
+
+  body:has(#appView:not([hidden])) #appView > header {
+    padding: 14px 16px;
+  }
+
+  body:has(#appView:not([hidden])) .hero {
+    min-height: 160px;
+    padding: 24px 20px;
+  }
+
+  body:has(#appView:not([hidden])) .cards {
+    grid-template-columns: 1fr;
+  }
+}
