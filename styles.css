@@ -170,4 +170,153 @@ body:has(#loginView:not([hidden])) .auth button {
   }
 }
 
-/* TRANSALMA - Interior corporativo azul y dorado */
+/* ==================================================
+   TRANSALMA - INTERIOR CORPORATIVO AZUL Y DORADO
+   ================================================== */
+
+/* Fondo general */
+body {
+  background:
+    radial-gradient(ellipse at 15% 15%, #0755a0 0%, transparent 38%),
+    radial-gradient(ellipse at 85% 80%, #064b91 0%, transparent 40%),
+    linear-gradient(135deg, #03152f, #052e60 55%, #03152f) !important;
+  background-attachment: fixed;
+  color: #102b49;
+}
+
+/* Contenedor */
+.shell {
+  position: relative;
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Barra superior */
+header {
+  background: linear-gradient(110deg, #031a38, #073f78) !important;
+  color: #fff !important;
+  border: 1px solid #83b9e8;
+  border-radius: 20px !important;
+  box-shadow: 0 8px 25px #0005;
+}
+
+header small {
+  color: #dcecff !important;
+}
+
+/* Encabezado Reportes de descarga */
+.hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 190px;
+  padding: 34px !important;
+  color: #fff !important;
+  background:
+    linear-gradient(
+      90deg,
+      #031b3b 0%,
+      rgba(3, 34, 72, .98) 35%,
+      rgba(3, 43, 83, .65) 65%,
+      rgba(3, 43, 83, .12) 100%
+    ),
+    url("login-background.jpg.png") right center / cover no-repeat,
+    #052e60 !important;
+  border: 1px solid #b9d8f2;
+  border-radius: 22px !important;
+  box-shadow: 0 10px 30px #0005;
+}
+
+.hero p {
+  color: #c7d9ed !important;
+}
+
+.hero h1,
+.hero span {
+  color: #fff !important;
+}
+
+/* Tarjetas de accesos */
+.cards {
+  gap: 16px;
+}
+
+.action {
+  min-height: 82px;
+  padding: 18px 20px !important;
+  color: #102b49 !important;
+  background: #fff !important;
+  border: 1px solid #d4e3f0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 7px 18px #0003;
+}
+
+.action b {
+  color: #0b2d4d !important;
+}
+
+.action small {
+  color: #526b84 !important;
+}
+
+/* Paneles y administración */
+.card {
+  color: #172b40;
+  background: #fff !important;
+  border: 1px solid #d5e3ef !important;
+  border-radius: 19px !important;
+  box-shadow: 0 9px 25px #0003;
+}
+
+.admin-card {
+  border: 2px solid #0b2d4d !important;
+}
+
+.admin-badge {
+  background: #0b2d4d !important;
+  color: #fff !important;
+}
+
+.subcard {
+  background: #f3f7fb !important;
+  border-color: #d6e3ee !important;
+}
+
+/* Botones */
+button:not(.secondary):not(.danger) {
+  background: #0b2d4d !important;
+  color: #fff !important;
+}
+
+button.secondary {
+  background: #e8eff6 !important;
+  color: #173a5c !important;
+}
+
+button.danger {
+  background: #9b1c1c !important;
+  color: #fff !important;
+}
+
+/* Tablas */
+th {
+  background: #eaf1f7 !important;
+  color: #0b2d4d !important;
+}
+
+/* Adaptación móvil */
+@media (max-width: 800px) {
+  .shell {
+    padding: 12px;
+  }
+
+  .hero {
+    min-height: 165px;
+    padding: 24px !important;
+    background-position: 65% center;
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}
