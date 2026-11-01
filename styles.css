@@ -665,3 +665,114 @@ th {
     min-height: 72px;
   }
 }
+
+/* =====================================================
+   CORRECCIÓN VISUAL TRANSALMA
+   Restaurar acceso + mejorar legibilidad del interior
+   ===================================================== */
+
+/* 1. RESTAURAR EL FONDO APROBADO DEL INICIO */
+body:has(#loginView:not([hidden])) {
+  background-color: #052b50 !important;
+  background-image:
+    linear-gradient(115deg, rgba(4,22,43,.20), rgba(4,22,43,.08)),
+    url("./login-background.jpg.png") !important;
+  background-position: center center !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+}
+
+/* Mantener el formulario de acceso aprobado */
+body:has(#loginView:not([hidden])) .auth {
+  background: linear-gradient(
+    145deg,
+    rgba(13,55,94,.76),
+    rgba(5,28,55,.62)
+  ) !important;
+  color: #fff !important;
+}
+
+/* 2. FONDO CORPORATIVO DEL SISTEMA INTERNO */
+body:not(:has(#loginView:not([hidden]))) {
+  background:
+    radial-gradient(ellipse at 15% 15%, #0755a0 0%, transparent 38%),
+    radial-gradient(ellipse at 85% 80%, #064b91 0%, transparent 40%),
+    linear-gradient(135deg,#03152f,#052e60 55%,#03152f) !important;
+  color: #102b49 !important;
+}
+
+/* 3. ACCESOS: BLANCOS Y CON TEXTO LEGIBLE */
+body:not(:has(#loginView:not([hidden]))) .cards .action,
+body:not(:has(#loginView:not([hidden]))) button.action {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #0b2d4d !important;
+  border: 1px solid #d4e3f0 !important;
+  box-shadow: 0 7px 18px rgba(0,0,0,.20) !important;
+  opacity: 1 !important;
+}
+
+body:not(:has(#loginView:not([hidden]))) .cards .action *,
+body:not(:has(#loginView:not([hidden]))) button.action * {
+  color: #0b2d4d !important;
+  opacity: 1 !important;
+}
+
+body:not(:has(#loginView:not([hidden]))) .cards .action small {
+  color: #526b84 !important;
+}
+
+/* 4. PANEL DE ADMINISTRACIÓN */
+body:not(:has(#loginView:not([hidden]))) .admin-card,
+body:not(:has(#loginView:not([hidden]))) .card {
+  background: #ffffff !important;
+  color: #102b49 !important;
+  opacity: 1 !important;
+}
+
+body:not(:has(#loginView:not([hidden]))) .admin-card h2,
+body:not(:has(#loginView:not([hidden]))) .admin-card h3,
+body:not(:has(#loginView:not([hidden]))) .admin-card p {
+  color: #102b49 !important;
+  opacity: 1 !important;
+}
+
+/* 5. BOTONES FUNCIONALES Y VISIBLES */
+body:not(:has(#loginView:not([hidden]))) button:not(.secondary):not(.danger) {
+  background: linear-gradient(135deg,#0b2d4d,#07518a) !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+body:not(:has(#loginView:not([hidden]))) button.secondary {
+  background: #e8eff6 !important;
+  color: #173a5c !important;
+}
+
+body:not(:has(#loginView:not([hidden]))) button.danger {
+  background: #9b1c1c !important;
+  color: #ffffff !important;
+}
+
+/* 6. TEXTO GENERAL Y TABLAS */
+body:not(:has(#loginView:not([hidden]))) label,
+body:not(:has(#loginView:not([hidden]))) th,
+body:not(:has(#loginView:not([hidden]))) td {
+  color: #17324e;
+}
+
+body:not(:has(#loginView:not([hidden]))) th {
+  background: #eaf1f7 !important;
+}
+
+/* 7. MÓVILES */
+@media(max-width:800px) {
+  body:has(#loginView:not([hidden])) {
+    background-attachment: scroll !important;
+  }
+
+  body:not(:has(#loginView:not([hidden]))) .cards {
+    grid-template-columns: 1fr;
+  }
+}
