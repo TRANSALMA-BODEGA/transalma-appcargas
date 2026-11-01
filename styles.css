@@ -776,3 +776,38 @@ body:not(:has(#loginView:not([hidden]))) th {
     grid-template-columns: 1fr;
   }
 }
+
+/* CORRECCIÓN DEFINITIVA: ACCESOS TRANSALMA */
+.cards .action,
+.cards button.action,
+button.action {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #0b2d4d !important;
+  border: 1px solid #d5e3ef !important;
+  opacity: 1 !important;
+  box-shadow: 0 5px 16px rgba(0,0,0,.16) !important;
+}
+
+/* Títulos de los tres accesos */
+.cards .action b,
+.cards .action strong,
+.cards .action span,
+.cards button.action b,
+.cards button.action span {
+  color: #0b2d4d !important;
+  opacity: 1 !important;
+}
+
+/* Descripciones */
+.cards .action small,
+.cards button.action small {
+  color: #526b84 !important;
+  opacity: 1 !important;
+}
+
+/* Mantener botones administrativos azules */
+.admin-actions button:not(.secondary):not(.danger) {
+  background: #0b2d4d !important;
+  color: #ffffff !important;
+}
