@@ -1381,7 +1381,8 @@ console.timeEnd("PDF - Subida a Supabase");
     if(ev.error)console.warn("PDF generado, pero no se pudo registrar el evento:",ev.error);
 
     // Descargar después de guardar y actualizar todo.
-    const savedLocally=await savePdfToSelectedFolder(pdfBlob,fileName);\n    if(!savedLocally)doc.save(fileName);
+    const savedLocally=await savePdfToSelectedFolder(pdfBlob,fileName);
+    if(!savedLocally)doc.save(fileName);
   }
 
   $("generatePdf").onclick=async()=>{
