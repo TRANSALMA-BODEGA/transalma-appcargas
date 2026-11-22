@@ -735,6 +735,61 @@ return { report, photoData, sigData, merchandiseDetails };
     const lines=doc.splitTextToSize(String(text??""),maxWidth);doc.text(lines,x,y);return y+lines.length*lineHeight;
   }
 
+  // Carpeta local elegida por el usuario. El permiso se conserva en IndexedDB.
+  const pdfFolderDb = "transalma-local-settings";
+  function openPdfFolderDb(){
+    return new Promise((resolve,reject)=>{
+      const request=indexedDB.open(pdfFolderDb,1);
+      request.onupgradeneeded=()=>request.result.createObjectStore("settings");
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error);
+    });
+  }
+  async function storePdfFolder(handle){
+    const db=await openPdfFolderDb();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction("settings","readwrite");
+      tx.objectStore("settings").put(handle,"pdfFolder");
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+    });
+    db.close();
+  }
+  async function getPdfFolder(){
+    const db=await openPdfFolderDb();
+    const handle=await new Promise((resolve,reject)=>{
+      const request=db.transaction("settings","readonly").objectStore("settings").get("pdfFolder");
+      request.onsuccess=()=>resolve(request.result||null);
+      request.onerror=()=>reject(request.error);
+    });
+    db.close();return handle;
+  }
+  $("selectPdfFolder").onclick=async()=>{
+    if(!window.showDirectoryPicker){
+      msg("pdfMessage","Este navegador no permite seleccionar carpetas. Usa Microsoft Edge actualizado.");
+      return;
+    }
+    try{
+      const handle=await window.showDirectoryPicker({id:"transalma-pdf-folder",mode:"readwrite"});
+      const permission=await handle.requestPermission({mode:"readwrite"});
+      if(permission!=="granted")throw new Error("No se concedió permiso para guardar en esa carpeta.");
+      await storePdfFolder(handle);
+      msg("pdfMessage",`Carpeta de destino seleccionada: ${handle.name}`);
+    }catch(error){
+      if(error.name!=="AbortError")msg("pdfMessage",error.message||"No se pudo seleccionar la carpeta.");
+    }
+  };
+  async function savePdfToSelectedFolder(blob,fileName){
+    const handle=await getPdfFolder();
+    if(!handle)return false;
+    let permission=await handle.queryPermission({mode:"readwrite"});
+    if(permission!=="granted")permission=await handle.requestPermission({mode:"readwrite"});
+    if(permission!=="granted")return false;
+    const fileHandle=await handle.getFileHandle(fileName,{create:true});
+    const writable=await fileHandle.createWritable();
+    await writable.write(blob);await writable.close();
+    return true;
+  }
+
   async function generatePdf(reportId){
     if(!currentCanOperate){
   throw new Error("Tu perfil no tiene permiso para generar PDF.");
@@ -1326,7 +1381,7 @@ console.timeEnd("PDF - Subida a Supabase");
     if(ev.error)console.warn("PDF generado, pero no se pudo registrar el evento:",ev.error);
 
     // Descargar después de guardar y actualizar todo.
-    doc.save(fileName);
+    const savedLocally=await savePdfToSelectedFolder(pdfBlob,fileName);\n    if(!savedLocally)doc.save(fileName);
   }
 
   $("generatePdf").onclick=async()=>{
@@ -1399,6 +1454,8 @@ $("sendReportEmail").onclick=async()=>{
 
   if(error)throw error;
 
+  const savedLocally=await savePdfToSelectedFolder(file,`${report.report_number}.pdf`);
+  if(savedLocally)return;
   const url=URL.createObjectURL(file);
   const a=document.createElement("a");
   a.href=url;
