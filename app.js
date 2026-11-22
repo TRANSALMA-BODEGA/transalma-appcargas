@@ -1,6 +1,7 @@
 (()=> {
   const c=window.TRANSALMA_CONFIG;
   const sup=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_ANON_KEY);
+  window.TRANSALMA_SUPABASE = sup;
   const $=id=>document.getElementById(id);
   const msg=(id,t)=>{if($(id))$(id).textContent=t||""};
   const today=()=>new Date().toISOString().slice(0,10);
@@ -1976,6 +1977,8 @@ $("editForm").onsubmit=async e=>{
     button.disabled=false;
   }
 };
+
+  window.TRANSALMA_OPEN_EDIT = openEdit;
 
   async function resendReport(reportId){
   if(!(currentIsAdmin||currentIsSupervisor))return;
