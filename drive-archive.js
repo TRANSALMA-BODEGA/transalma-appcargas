@@ -280,7 +280,7 @@
   async function searchArchivedReport() {
     if (!accessToken) throw new Error("Conecta Google Drive primero.");
     const raw = $("archiveReportNumber")?.value.trim().toUpperCase() || "";
-    if (!/^TI-\\d{6}$/.test(raw)) throw new Error("Escribe el número completo, por ejemplo TI-000001.");
+    if (!/^TI-\d{6}$/.test(raw)) throw new Error("Escribe el número completo, por ejemplo TI-000001.");
     const out = $("archiveSearchResults");
     out.replaceChildren();
     const metadataName = raw + "_METADATOS.json";
@@ -352,7 +352,7 @@
               image.style.display = "block";
               image.style.marginTop = "12px";
               preview.appendChild(image);
-            } else if (blob.type === "application/pdf" || /\\.pdf$/i.test(file.name)) {
+            } else if (blob.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
               const frame = document.createElement("iframe");
               frame.src = url;
               frame.title = file.name;
