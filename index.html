@@ -48,7 +48,8 @@
   </div>
   <div class="admin-actions">
     <button id="openAdminHistory">📋 Administrar reportes</button>
-    <button id="openAdminUsers" type="button" class="secondary">👥 Usuarios</button> 
+    <button id="openAdminUsers" type="button" class="secondary">👥 Usuarios</button>
+    <button id="openDriveArchive" type="button" class="secondary">☁️ Archivo Google Drive</button> 
   </div>
 </section>
 
@@ -175,6 +176,24 @@
   <div id="historyContent">Cargando…</div>
 </section>
 
+<section id="driveArchivePanel" class="card" hidden>
+  <div class="head">
+    <div><h2>☁️ Archivo histórico en Google Drive</h2><p class="hint">Copia de seguridad por lotes. No elimina archivos de Supabase.</p></div>
+    <button id="closeDriveArchive" type="button" class="secondary">Cerrar</button>
+  </div>
+  <div class="grid">
+    <label class="wide">Clave API de Google Picker (se guarda solo en esta sesión)
+      <input id="driveApiKey" type="password" autocomplete="off" placeholder="Pega aquí la clave TRANSALMA-PICKER-API">
+    </label>
+  </div>
+  <div class="actions">
+    <button id="connectDrive" type="button">🔐 Autorizar Google y elegir carpeta</button>
+    <button id="runDriveArchive" type="button" disabled>📦 Iniciar respaldo por lotes</button>
+  </div>
+  <progress id="driveArchiveProgress" value="0" max="1" style="width:100%"></progress>
+  <p id="driveArchiveStatus" class="hint">Primero autoriza Google y selecciona la carpeta TRANSALMA_REPORTES_ARCHIVO.</p>
+</section>
+
 <section id="adminPanel" class="card" hidden>
   <div class="head"><div><h2>Administración de reportes</h2><p class="hint">Edición, anulación, auditoría y eliminación controlada de pruebas.</p></div><button id="closeAdmin" type="button" class="secondary">Volver</button></div>
   <div id="adminContent">Cargando…</div>
@@ -285,5 +304,6 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
+<script src="drive-archive.js"></script>
 </body>
 </html>
