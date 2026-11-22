@@ -1454,6 +1454,8 @@ $("sendReportEmail").onclick=async()=>{
 
   if(error)throw error;
 
+  const savedLocally=await savePdfToSelectedFolder(file,`${report.report_number}.pdf`);
+  if(savedLocally)return;
   const url=URL.createObjectURL(file);
   const a=document.createElement("a");
   a.href=url;
