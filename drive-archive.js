@@ -447,6 +447,11 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    $("historySearchDrive")?.addEventListener("click", () => {
+      showPanel();
+      $("archiveReportNumber")?.focus();
+      $("historyPanel") && ($("historyPanel").hidden = true);
+    });
     $("openDriveArchive")?.addEventListener("click", showPanel);
     $("closeDriveArchive")?.addEventListener("click", closePanel);
     $("driveApiKey")?.addEventListener("change", event => { apiKey = event.target.value.trim(); });
