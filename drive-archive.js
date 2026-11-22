@@ -269,43 +269,49 @@
     return all;
   }
 
+  async function fetchDriveBlob(fileId) {
+    const response = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) + "?alt=media", {
+      headers: { Authorization: "Bearer " + accessToken }
+    });
+    if (!response.ok) throw new Error("No se pudo recuperar el archivo desde Drive (HTTP " + response.status + ").");
+    return response.blob();
+  }
+
   async function searchArchivedReport() {
     if (!accessToken) throw new Error("Conecta Google Drive primero.");
     const raw = $("archiveReportNumber")?.value.trim().toUpperCase() || "";
-    if (!/^TI-\d{6}$/.test(raw)) throw new Error("Escribe el número completo, por ejemplo TI-000001.");
+    if (!/^TI-\\d{6}$/.test(raw)) throw new Error("Escribe el número completo, por ejemplo TI-000001.");
     const out = $("archiveSearchResults");
     out.replaceChildren();
     const metadataName = raw + "_METADATOS.json";
-    const matches = await listDriveFiles(
-      "name = '" + escapeDriveQuery(metadataName) + "' and trashed = false",
-      "files(id,name,mimeType,parents,webViewLink),nextPageToken"
-    );
+    const matches = await listDriveFiles("name = '" + escapeDriveQuery(metadataName) + "' and trashed = false", "files(id,name,mimeType,parents,webViewLink),nextPageToken");
     if (!matches.length) {
       out.textContent = "No se encontró " + raw + " en la carpeta de archivo autorizada. Verifica que seleccionaste TRANSALMA_REPORTES_ARCHIVO.";
       return;
     }
     const metaFile = matches[0];
-    const response = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(metaFile.id) + "?alt=media", {
-      headers: { Authorization: "Bearer " + accessToken }
-    });
-    if (!response.ok) throw new Error("No se pudieron leer los metadatos del reporte (HTTP " + response.status + ").");
-    const metadata = await response.json();
+    const metadata = JSON.parse(await (await fetchDriveBlob(metaFile.id)).text());
     const reportFolderId = (metaFile.parents || [])[0];
     if (!reportFolderId) throw new Error("El archivo de metadatos no tiene carpeta de reporte asociada.");
     const files = await listDriveFiles("'" + escapeDriveQuery(reportFolderId) + "' in parents and trashed = false");
     const sections = {};
     for (const file of files) {
-      if (file.mimeType === FOLDER_MIME) {
-        sections[file.name] = await listDriveFiles("'" + escapeDriveQuery(file.id) + "' in parents and trashed = false");
-      }
+      if (file.mimeType === FOLDER_MIME) sections[file.name] = await listDriveFiles("'" + escapeDriveQuery(file.id) + "' in parents and trashed = false");
     }
     const title = document.createElement("h3");
-    title.textContent = raw + " · Reporte histórico encontrado";
+    title.textContent = raw + " · Reporte histórico recuperado desde Google Drive";
     out.appendChild(title);
-    const info = document.createElement("p");
     const report = metadata.report || {};
-    info.textContent = [report.fecha, report.contenedor, report.client_name, report.status].filter(Boolean).join(" · ") || "Metadatos disponibles";
+    const info = document.createElement("p");
+    info.textContent = [report.fecha && "Fecha: " + report.fecha, report.report_type && "Tipo: " + report.report_type, report.contenedor && "Contenedor: " + report.contenedor, report.client_name && "Cliente: " + report.client_name, report.status && "Estado: " + report.status].filter(Boolean).join(" · ") || "Metadatos disponibles";
     out.appendChild(info);
+
+    const preview = document.createElement("div");
+    preview.className = "subcard";
+    preview.style.margin = "12px 0";
+    preview.hidden = true;
+    out.appendChild(preview);
+
     const addSection = (label, items) => {
       const heading = document.createElement("h4");
       heading.textContent = label;
@@ -319,12 +325,58 @@
       const list = document.createElement("ul");
       for (const file of items) {
         const li = document.createElement("li");
-        const a = document.createElement("a");
-        a.href = "https://drive.google.com/uc?id=" + encodeURIComponent(file.id) + "&export=download";
-        a.target = "_blank";
-        a.rel = "noopener";
-        a.textContent = file.name;
-        li.appendChild(a);
+        const open = document.createElement("button");
+        open.type = "button";
+        open.className = "secondary";
+        open.textContent = "Ver / descargar " + file.name;
+        open.addEventListener("click", async () => {
+          open.disabled = true;
+          open.textContent = "Recuperando desde Drive…";
+          try {
+            const blob = await fetchDriveBlob(file.id);
+            const url = URL.createObjectURL(blob);
+            preview.replaceChildren();
+            preview.hidden = false;
+            const close = document.createElement("button");
+            close.type = "button";
+            close.className = "secondary";
+            close.textContent = "Cerrar vista previa";
+            close.addEventListener("click", () => { preview.hidden = true; preview.replaceChildren(); URL.revokeObjectURL(url); });
+            preview.appendChild(close);
+            if (blob.type.startsWith("image/")) {
+              const image = document.createElement("img");
+              image.src = url;
+              image.alt = file.name;
+              image.style.maxWidth = "100%";
+              image.style.maxHeight = "65vh";
+              image.style.display = "block";
+              image.style.marginTop = "12px";
+              preview.appendChild(image);
+            } else if (blob.type === "application/pdf" || /\\.pdf$/i.test(file.name)) {
+              const frame = document.createElement("iframe");
+              frame.src = url;
+              frame.title = file.name;
+              frame.style.width = "100%";
+              frame.style.height = "65vh";
+              frame.style.border = "0";
+              frame.style.marginTop = "12px";
+              preview.appendChild(frame);
+            }
+            const download = document.createElement("a");
+            download.href = url;
+            download.download = file.name;
+            download.textContent = "Descargar " + file.name;
+            download.style.display = "inline-block";
+            download.style.margin = "12px";
+            preview.appendChild(download);
+          } catch (error) {
+            status(error.message || "No se pudo recuperar el archivo.");
+          } finally {
+            open.disabled = false;
+            open.textContent = "Ver / descargar " + file.name;
+          }
+        });
+        li.appendChild(open);
         list.appendChild(li);
       }
       out.appendChild(list);
@@ -332,34 +384,15 @@
     addSection("PDF_REPORTES", sections.PDF_REPORTES || []);
     addSection("FOTOGRAFIAS", sections.FOTOGRAFIAS || []);
     addSection("FIRMAS", sections.FIRMAS || []);
-    const jsonLink = document.createElement("a");
-    jsonLink.href = "https://drive.google.com/file/d/" + encodeURIComponent(metaFile.id) + "/view";
-    jsonLink.target = "_blank";
-    jsonLink.rel = "noopener";
-    jsonLink.textContent = "Abrir metadatos originales";
-    out.appendChild(jsonLink);
-    if (report.id) {
-      const editButton = document.createElement("button");
-      editButton.type = "button";
-      editButton.textContent = "Abrir reporte en el formulario de edición";
-      editButton.style.marginTop = "12px";
-      editButton.addEventListener("click", async () => {
-        if (typeof window.TRANSALMA_OPEN_EDIT !== "function") {
-          status("El formulario de edición no está disponible.");
-          return;
-        }
-        editButton.disabled = true;
-        try {
-          await window.TRANSALMA_OPEN_EDIT(report.id);
-          closePanel();
-        } catch (error) {
-          status(error.message || "No se pudo abrir el reporte para editar.");
-        } finally {
-          editButton.disabled = false;
-        }
-      });
-      out.appendChild(editButton);
-    }
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    summary.textContent = "Consultar metadatos completos del reporte";
+    const pre = document.createElement("pre");
+    pre.textContent = JSON.stringify(metadata, null, 2);
+    pre.style.whiteSpace = "pre-wrap";
+    pre.style.overflowWrap = "anywhere";
+    details.append(summary, pre);
+    out.appendChild(details);
     out.dataset.report = JSON.stringify(metadata);
   }
 
