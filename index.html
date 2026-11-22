@@ -48,7 +48,8 @@
   </div>
   <div class="admin-actions">
     <button id="openAdminHistory">📋 Administrar reportes</button>
-    <button id="openAdminUsers" type="button" class="secondary">👥 Usuarios</button> 
+    <button id="openAdminUsers" type="button" class="secondary">👥 Usuarios</button>
+    <button id="openDriveArchive" type="button" class="secondary">☁️ Archivo Google Drive</button> 
   </div>
 </section>
 
@@ -280,10 +281,26 @@
 </section>
 
 </section>
+<section id="driveArchivePanel" class="card" hidden>
+  <div class="head">
+    <div><h2>☁️ Archivo histórico en Google Drive</h2><p class="hint">Respaldo por lotes. No elimina archivos de Supabase.</p></div>
+    <button id="closeDriveArchive" type="button" class="secondary">Cerrar</button>
+  </div>
+  <div class="grid"><label class="wide">Clave API de Google Picker (solo para esta sesión)
+    <input id="driveApiKey" type="password" autocomplete="off" placeholder="Clave API de Google Picker">
+  </label></div>
+  <div class="actions">
+    <button id="connectDrive" type="button">🔐 Autorizar Google y elegir carpeta</button>
+    <button id="runDriveArchive" type="button" disabled>📦 Iniciar respaldo por lotes</button>
+  </div>
+  <progress id="driveArchiveProgress" value="0" max="1" style="width:100%"></progress>
+  <p id="driveArchiveStatus" class="hint">Autoriza Google y selecciona TRANSALMA_REPORTES_ARCHIVO.</p>
+</section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
+<script src="drive-archive.js"></script>
 </body>
 </html>
