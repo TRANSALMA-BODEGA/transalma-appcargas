@@ -173,23 +173,33 @@
   }
 
   async function fetchRows() {
-    const reportsResult = await sup.from("reports").select("*").order("created_at", { ascending: true });
-    if (reportsResult.error) throw reportsResult.error;
-    const photosResult = await sup.from("report_photos").select("*");
-    if (photosResult.error) throw photosResult.error;
-    const signaturesResult = await sup.from("report_signatures").select("*");
-    if (signaturesResult.error) throw signaturesResult.error;
-    return { reports: reportsResult.data || [], photos: photosResult.data || [], signatures: signaturesResult.data || [] };
+    const [reportsResult, photosResult, signaturesResult, detailsResult, eventsResult] = await Promise.all([
+      sup.from("reports").select("*").order("created_at", { ascending: true }),
+      sup.from("report_photos").select("*"),
+      sup.from("report_signatures").select("*"),
+      sup.from("report_merchandise_details").select("*").order("sort_order", { ascending: true }),
+      sup.from("report_events").select("*")
+    ]);
+    for (const result of [reportsResult, photosResult, signaturesResult, detailsResult, eventsResult]) {
+      if (result.error) throw result.error;
+    }
+    return {
+      reports: reportsResult.data || [],
+      photos: photosResult.data || [],
+      signatures: signaturesResult.data || [],
+      details: detailsResult.data || [],
+      events: eventsResult.data || []
+    };
   }
 
   async function runArchive() {
     if (!sup) throw new Error("No se encontró la conexión de Supabase en esta sesión.");
     if (!accessToken || !selectedRoot) throw new Error("Primero conecta Google Drive y selecciona la carpeta raíz.");
-    const { reports, photos, signatures } = await fetchRows();
+    const { reports, photos, signatures, details, events } = await fetchRows();
     const tasks = reports.reduce((sum, report) => {
       return sum + (report.pdf_storage_path ? 1 : 0) +
         photos.filter(photo => photo.report_id === report.id).length +
-        signatures.filter(signature => signature.report_id === report.id).length + 1;
+        signatures.filter(signature => signature.report_id === report.id).length + 2;
     }, 0);
     let done = 0, copied = 0, skipped = 0, errors = [];
     progress(0,tasks);
@@ -232,15 +242,31 @@
           } finally { done++; progress(done,tasks); }
         }
 
+        const reportDetails = details.filter(row => row.report_id === report.id);
+        const reportEvents = events.filter(row => row.report_id === report.id);
         const metadata = new Blob([JSON.stringify({
+          metadata_version: 2,
+          report,
+          merchandise_details: reportDetails,
+          photos: reportPhotos,
+          signatures: reportSignatures,
+          events: reportEvents,
+          archived_at: new Date().toISOString(),
+          archive_source: "TRANSALMA Supabase"
+        }, null, 2)], { type: "application/json" });
+        const metaResult = await uploadBlob(reportFolder, `${reportNo}_METADATOS_COMPLETOS.json`, metadata, "application/json");
+        metaResult.skipped ? skipped++ : copied++;
+        done++; progress(done,tasks);
+
+        const legacyMetadata = new Blob([JSON.stringify({
           report,
           photos: reportPhotos,
           signatures: reportSignatures,
           archived_at: new Date().toISOString(),
           archive_source: "TRANSALMA Supabase Storage"
         }, null, 2)], { type: "application/json" });
-        const metaResult = await uploadBlob(reportFolder, `${reportNo}_METADATOS.json`, metadata, "application/json");
-        metaResult.skipped ? skipped++ : copied++;
+        const legacyResult = await uploadBlob(reportFolder, `${reportNo}_METADATOS.json`, legacyMetadata, "application/json");
+        legacyResult.skipped ? skipped++ : copied++;
         done++; progress(done,tasks);
       } catch (error) {
         errors.push(`${report.report_number || report.id}: ${error.message}`);
@@ -283,8 +309,11 @@
     if (!/^TI-\d{6}$/.test(raw)) throw new Error("Escribe el número completo, por ejemplo TI-000001.");
     const out = $("archiveSearchResults");
     out.replaceChildren();
-    const metadataName = raw + "_METADATOS.json";
-    const matches = await listDriveFiles("name = '" + escapeDriveQuery(metadataName) + "' and trashed = false", "files(id,name,mimeType,parents,webViewLink),nextPageToken");
+    const completeName = raw + "_METADATOS_COMPLETOS.json";
+    const legacyName = raw + "_METADATOS.json";
+    const completeMatches = await listDriveFiles("name = '" + escapeDriveQuery(completeName) + "' and trashed = false", "files(id,name,mimeType,parents,webViewLink),nextPageToken");
+    const legacyMatches = completeMatches.length ? [] : await listDriveFiles("name = '" + escapeDriveQuery(legacyName) + "' and trashed = false", "files(id,name,mimeType,parents,webViewLink),nextPageToken");
+    const matches = completeMatches.length ? completeMatches : legacyMatches;
     if (!matches.length) {
       out.textContent = "No se encontró " + raw + " en la carpeta de archivo autorizada. Verifica que seleccionaste TRANSALMA_REPORTES_ARCHIVO.";
       return;
